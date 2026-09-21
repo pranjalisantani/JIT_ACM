@@ -3,73 +3,46 @@ import { MemberItem } from "@/types";
 export const TEAM_MEMBERS: MemberItem[] = [
   {
     id: "tm-01",
-    name: "Dr. A. K. Sharma",
-    role: "Chapter Faculty Sponsor",
-    bio: "Guiding the ACM Student Chapter charter, curriculum initiatives, and institutional research affiliations.",
-    links: [
-      { label: "Email", url: "mailto:faculty@jit.acm.org" },
-    ],
-    placeholder: true, // Placeholder until verified by institution
+    name: "Name",
+    role: "Role",
+    bio: "Guiding the ACM Student Chapter charter, curriculum initiatives, and research affiliations.",
+    placeholder: true,
   },
   {
     id: "tm-02",
-    name: "Chairperson",
-    role: "Chapter Chair",
-    bio: "Directing strategic roadmap, chapter stewardship, and inter-chapter partnerships across ACM networks.",
-    links: [
-      { label: "GitHub", url: "https://github.com" },
-      { label: "LinkedIn", url: "https://linkedin.com" },
-    ],
+    name: "Name",
+    role: "Role",
+    bio: "Directing strategic roadmap, chapter stewardship, and inter-chapter partnerships.",
     placeholder: true,
   },
   {
     id: "tm-03",
-    name: "Vice Chair",
-    role: "Vice Chairperson",
-    bio: "Overseeing chapter programming, symposium colloquia, and community onboarding.",
-    links: [
-      { label: "GitHub", url: "https://github.com" },
-      { label: "LinkedIn", url: "https://linkedin.com" },
-    ],
+    name: "Name",
+    role: "Role",
+    bio: "Overseeing chapter programming, colloquia, and community onboarding.",
     placeholder: true,
   },
   {
     id: "tm-04",
-    name: "Treasurer",
-    role: "Finance & Logistics Officer",
-    bio: "Stewardship of chapter grants, project funding allocations, and annual symposium operations.",
-    links: [
-      { label: "Email", url: "mailto:treasury@jit.acm.org" },
-    ],
+    name: "Name",
+    role: "Role",
+    bio: "Stewardship of chapter grants, project funding allocations, and operations.",
     placeholder: true,
   },
   {
     id: "tm-05",
-    name: "Technical Director",
-    role: "Head of Systems & Infrastructure",
+    name: "Name",
+    role: "Role",
     bio: "Architecting chapter internal platforms, server infrastructure, and open-source tooling.",
-    links: [
-      { label: "GitHub", url: "https://github.com" },
-    ],
     placeholder: true,
   },
   {
     id: "tm-06",
-    name: "Research Lead",
-    role: "Machine Intelligence Lead",
-    bio: "Facilitating paper reading groups, model evaluations, and applied generative experiments.",
-    links: [
-      { label: "GitHub", url: "https://github.com" },
-    ],
+    name: "Name",
+    role: "Role",
+    bio: "Facilitating research reading groups, model evaluations, and computational experiments.",
     placeholder: true,
   },
 ];
 
-export const FALLBACK_PLACEHOLDER_TEAM: MemberItem[] = [
-  { name: "Name", role: "Role", placeholder: true },
-  { name: "Name", role: "Role", placeholder: true },
-  { name: "Name", role: "Role", placeholder: true },
-  { name: "Name", role: "Role", placeholder: true },
-  { name: "Name", role: "Role", placeholder: true },
-  { name: "Name", role: "Role", placeholder: true },
-];
+export const FALLBACK_PLACEHOLDER_TEAM: MemberItem[] = TEAM_MEMBERS;

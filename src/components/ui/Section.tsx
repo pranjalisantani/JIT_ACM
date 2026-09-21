@@ -36,6 +36,12 @@ export function Section({
       {!noDivider && (
         <div className="absolute top-0 inset-x-0 max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16">
           <Hairline orientation="horizontal" />
+          <div
+            aria-hidden="true"
+            className="absolute left-1/2 -translate-x-1/2 -top-1.5 flex flex-col items-center select-none pointer-events-none"
+          >
+            <Diamond size={5} filled={false} />
+          </div>
         </div>
       )}
 

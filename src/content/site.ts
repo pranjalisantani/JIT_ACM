@@ -39,7 +39,7 @@ export const ABOUT_PILLARS: Record<"people" | "events" | "projects" | "learning"
   events: {
     id: "events",
     title: "Events",
-    description: "Colloquia, workshops, and continuous hackathons exploring machine frontiers.",
+    description: "Colloquia, research sessions, and continuous builds exploring machine frontiers.",
     href: "#events",
   },
   projects: {

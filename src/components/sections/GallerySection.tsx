@@ -168,6 +168,9 @@ export function GallerySection() {
 
   const renderPhotoCard = (photo: GalleryPhoto, idx: number, isClone = false) => {
     const isCenter = !isClone && centerIdx === idx;
+    const verticalOffsets = [-16, 18, -10, 14, -20, 12, -8, 16];
+    const vOffset = verticalOffsets[idx % verticalOffsets.length];
+
     const aspectStyles: Record<string, string> = {
       "4:5": "w-[260px] sm:w-[300px] h-[325px] sm:h-[375px]",
       "1:1": "w-[280px] sm:w-[320px] h-[280px] sm:h-[320px]",
@@ -187,12 +190,19 @@ export function GallerySection() {
         key={isClone ? `clone-${idx}` : `real-${idx}`}
         data-gallery-real={!isClone ? "true" : undefined}
         aria-hidden={isClone ? "true" : undefined}
-        className={`shrink-0 flex flex-col justify-end transition-opacity duration-300 ${
-          isCenter ? "opacity-100" : "opacity-75 hover:opacity-100"
+        style={{
+          transform: reducedMotion ? "none" : `translate3d(0, ${vOffset}px, 0)`,
+        }}
+        className={`shrink-0 flex flex-col justify-end transition-all duration-500 will-change-transform ${
+          isCenter
+            ? "opacity-100 scale-[1.03] z-10"
+            : "opacity-65 hover:opacity-100 scale-[0.97] hover:scale-100"
         }`}
       >
         <div
-          className={`relative rounded-md overflow-hidden bg-neutral-900 border border-white/10 ${aspectClass}`}
+          className={`relative rounded-md overflow-hidden bg-neutral-900 border transition-all duration-300 ${
+            isCenter ? "border-white/40 shadow-2xl" : "border-white/10"
+          } ${aspectClass}`}
         >
           {photo.src && !photo.placeholder ? (
             <Image
@@ -245,7 +255,7 @@ export function GallerySection() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/50 max-w-md">
-              A continuous, chronological visual stream recording student colloquia, hackathons, and research build sessions.
+              A continuous, chronological visual stream recording student colloquia, convenings, and research build sessions.
             </p>
           </div>
 

@@ -53,11 +53,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         </Link>
       </nav>
 
-      {/* Main Project Dossier */}
+      {/* Main Project Profile */}
       <main className="max-w-4xl">
         <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-white/50 mb-6">
           <Diamond size={6} filled={true} />
-          <span>PROJECT DOSSIER</span>
+          <span>PROJECT PROFILE</span>
           {project.placeholder && (
             <span className="text-white/30">[PLACEHOLDER ARTIFACT]</span>
           )}

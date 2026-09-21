@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Section } from "@/components/ui/Section";
 import { Diamond } from "@/components/ui/Diamond";
 import { Reveal } from "@/components/ui/Reveal";
+import { Magnetic } from "@/components/ui/Magnetic";
 import { PROJECTS_DATA, FALLBACK_PLACEHOLDER_PROJECTS } from "@/content/projects";
 import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
@@ -65,32 +66,43 @@ export function ProjectsSection() {
         },
       });
 
+      // Phase 1: Laptop Screen Illuminates
+      if (laptopRef.current) {
+        tl.fromTo(
+          laptopRef.current,
+          { scale: 0.92, opacity: 0.6 },
+          { scale: 1, opacity: 1, duration: 0.35, ease: "power2.out" },
+          0
+        );
+      }
+
+      // Phase 2 & 3: Project cards emerge from screen center and settle
       cardsRef.current.forEach((card, idx) => {
         if (!card) return;
         const target = settledTransforms[idx % settledTransforms.length];
 
-        // 0% -> 35%: inside laptop screen (small scale, low opacity)
-        // 35% -> 75%: flying outward along computed vectors
-        // 75% -> 100%: settled in labelled layout
+        // 0% -> 30%: inside laptop screen (scale 0.2, hidden)
+        // 30% -> 70%: emerging outward along computed 3D vectors
+        // 70% -> 100%: fully settled in balanced quadrant layout
         tl.fromTo(
           card,
           {
             x: 0,
             y: -10,
-            scale: 0.28,
-            opacity: 0.2,
+            scale: 0.22,
+            opacity: 0,
             rotate: 0,
           },
           {
-            x: target.x * 0.4,
-            y: target.y * 0.4,
-            scale: 0.6,
-            opacity: 0.7,
+            x: target.x * 0.45,
+            y: target.y * 0.45,
+            scale: 0.65,
+            opacity: 0.75,
             rotate: target.rot * 0.5,
             duration: 0.4,
             ease: "power2.inOut",
           },
-          0.35
+          0.30
         ).to(
           card,
           {
@@ -99,10 +111,10 @@ export function ProjectsSection() {
             scale: 1,
             opacity: 1,
             rotate: target.rot,
-            duration: 0.25,
+            duration: 0.3,
             ease: "power3.out",
           },
-          0.75
+          0.70
         );
       });
     }, sectionEl);
@@ -113,7 +125,7 @@ export function ProjectsSection() {
   }, [reducedMotion, isMobile]);
 
   const renderCardContent = (project: ProjectItem) => (
-    <article className="w-full h-full p-6 bg-black border border-white/20 hover:border-white transition-colors flex flex-col justify-between group">
+    <article className="w-full h-full p-6 bg-black border border-white/20 hover:border-white transition-colors flex flex-col justify-between group shadow-xl">
       <div>
         <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.16em] text-white/50 mb-3">
           <div className="flex items-center gap-2">
@@ -143,9 +155,11 @@ export function ProjectsSection() {
             </span>
           ))}
         </div>
-        <span className="font-mono text-xs uppercase tracking-wider text-white/70 group-hover:text-white inline-flex items-center gap-1">
-          VIEW →
-        </span>
+        <Magnetic maxOffset={4}>
+          <span className="font-mono text-xs uppercase tracking-wider text-white/80 group-hover:text-white inline-flex items-center gap-1 border border-white/20 px-2.5 py-1 hover:border-white transition-colors">
+            VIEW →
+          </span>
+        </Magnetic>
       </div>
     </article>
   );

@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import gsap from "gsap";
 import { Diamond } from "@/components/ui/Diamond";
 import { Hairline } from "@/components/ui/Hairline";
 import { TwoToneHeading } from "@/components/ui/TwoToneHeading";
 import { HERO_STATEMENT, SITE_CONFIG } from "@/content/site";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
+import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
 
 export function OpeningSection() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
@@ -35,6 +36,22 @@ export function OpeningSection() {
           delay: 0.2,
         }
       );
+
+      // Subtle spatial scroll choreography: content gently recedes into depth on scroll
+      const ScrollTrigger = registerScrollTrigger();
+      if (ScrollTrigger && containerRef.current && contentRef.current) {
+        gsap.to(contentRef.current, {
+          y: -30,
+          opacity: 0.85,
+          ease: "none",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.5,
+          },
+        });
+      }
     }, containerRef);
 
     return () => ctx.revert();
@@ -47,28 +64,46 @@ export function OpeningSection() {
       id="hero"
       ref={containerRef}
       aria-label="Chapter Introduction"
-      className="relative w-full min-h-[85vh] sm:min-h-[90vh] flex flex-col justify-between pt-32 pb-16 px-6 sm:px-10 lg:px-16 max-w-[1440px] mx-auto text-white"
+      className="relative w-full min-h-[90vh] sm:min-h-[95vh] flex flex-col justify-between pt-32 pb-16 px-6 sm:px-10 lg:px-16 max-w-[1440px] mx-auto text-white overflow-hidden"
     >
-      {/* Top Meta Line */}
-      <div className="flex items-center justify-between font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.2em] text-white/50 border-b border-white/[0.14] pb-5">
-        <div className="flex items-center gap-2">
-          <Diamond size={6} filled={true} />
-          <span>CHAPTER HERO</span>
-        </div>
-        <span className="hidden sm:inline-block">EST. 2026</span>
+      {/* Subtle Corner Architectural Crosshairs */}
+      <div
+        aria-hidden="true"
+        className="absolute top-28 left-6 sm:left-10 lg:left-16 font-mono text-[10px] text-white/20 select-none pointer-events-none"
+      >
+        + [0,0]
+      </div>
+      <div
+        aria-hidden="true"
+        className="absolute top-28 right-6 sm:right-10 lg:right-16 font-mono text-[10px] text-white/20 select-none pointer-events-none"
+      >
+        + [1440,0]
       </div>
 
-      {/* Main Typographic Core */}
-      <div className="my-auto py-12 sm:py-20 max-w-5xl">
-        <p className="font-mono text-xs sm:text-sm uppercase tracking-[0.2em] text-white/60 mb-6">
-          {SITE_CONFIG.tagline}
-        </p>
+      {/* Top Meta Line: Chapter Identity & System Node */}
+      <div className="flex items-center justify-between font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.2em] text-white/50 border-b border-white/[0.14] pb-5">
+        <div className="flex items-center gap-3">
+          <Diamond size={6} filled={true} />
+          <span className="text-white/80">SYS // LIVING COMPUTING COMMUNITY</span>
+        </div>
+        <div className="flex items-center gap-4 text-white/40">
+          <span className="hidden md:inline-block">NODE 01 · ACTIVE</span>
+          <span>EST. 2026</span>
+        </div>
+      </div>
 
-        {/* <h1> ACM FACE </h1> with accessible text and optional per-character split */}
+      {/* Main Typographic Core with Deep Negative Space */}
+      <div ref={contentRef} className="my-auto py-16 sm:py-24 max-w-5xl will-change-transform">
+        <div className="flex items-center gap-2 font-mono text-xs sm:text-sm uppercase tracking-[0.22em] text-white/60 mb-6">
+          <Diamond size={5} filled={false} />
+          <span>{SITE_CONFIG.tagline}</span>
+        </div>
+
+        {/* <h1> ACM FACE </h1> with accessible text and per-character split */}
         <h1
           ref={titleRef}
           aria-label={titleText}
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white leading-none mb-10"
+          className="text-6xl sm:text-8xl md:text-9xl lg:text-[132px] font-light tracking-tight text-white leading-none mb-10"
           style={{ fontWeight: 300 }}
         >
           {reducedMotion ? (
@@ -91,22 +126,24 @@ export function OpeningSection() {
           as="h2"
           line1={HERO_STATEMENT.line1}
           line2={HERO_STATEMENT.line2}
-          className="text-2xl sm:text-3xl md:text-4xl max-w-3xl leading-snug"
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl max-w-4xl leading-[1.25]"
         />
       </div>
 
       {/* Bottom Scroll Anchor & Hairline */}
-      <div className="pt-6">
+      <div className="pt-8">
         <Hairline orientation="horizontal" className="mb-6" />
         <div className="flex items-center justify-between font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] text-white/50">
           <a
             href={SITE_CONFIG.scrollTarget}
-            className="flex items-center gap-2 hover:text-white transition-colors py-2 focus-visible:outline-white"
+            className="flex items-center gap-2 hover:text-white transition-colors py-2 focus-visible:outline-white group"
           >
             <Diamond size={5} filled={false} />
-            <span>{HERO_STATEMENT.scrollLabel}</span>
+            <span className="group-hover:translate-y-0.5 transition-transform">
+              {HERO_STATEMENT.scrollLabel}
+            </span>
           </a>
-          <span className="hidden md:inline-block">
+          <span className="hidden md:inline-block text-white/40">
             {SITE_CONFIG.institutionalLine}
           </span>
         </div>
@@ -114,3 +151,4 @@ export function OpeningSection() {
     </section>
   );
 }
+

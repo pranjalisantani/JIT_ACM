@@ -33,7 +33,7 @@ export interface ACMEvent {
   date: string;
   time?: string;
   venue?: string;
-  category: "Colloquium" | "Hackathon" | "Workshop" | "Symposium" | "Tech Talk";
+  category: "Colloquium" | "Convening" | "Session" | "Seminar" | "Tech Talk";
   description: string;
   status: "Upcoming" | "Completed" | "Open for RSVP";
   rsvpUrl?: string;

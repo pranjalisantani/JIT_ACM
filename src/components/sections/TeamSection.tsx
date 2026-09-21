@@ -6,13 +6,61 @@ import { Section } from "@/components/ui/Section";
 import { Diamond } from "@/components/ui/Diamond";
 import { Reveal } from "@/components/ui/Reveal";
 import { TEAM_MEMBERS, FALLBACK_PLACEHOLDER_TEAM } from "@/content/team";
+import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
+import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { MemberItem } from "@/types";
 
 export function TeamSection() {
   const members = TEAM_MEMBERS.length > 0 ? TEAM_MEMBERS : FALLBACK_PLACEHOLDER_TEAM;
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const row1Ref = useRef<HTMLDivElement | null>(null);
+  const row2Ref = useRef<HTMLDivElement | null>(null);
+
+  const reducedMotion = usePrefersReducedMotion();
+
+  // Lateral scroll parallax between Row 1 and Row 2 on desktop
+  useEffect(() => {
+    if (reducedMotion) return;
+    const isPaused = document.documentElement.getAttribute("data-motion") === "paused";
+    if (isPaused) return;
+
+    const ScrollTrigger = registerScrollTrigger();
+    if (!ScrollTrigger) return;
+
+    const sectionEl = document.getElementById("team");
+    if (!sectionEl || !row1Ref.current || !row2Ref.current) return;
+
+    const ctx = gsap.context(() => {
+      // Row 1 drifts slightly left
+      gsap.to(row1Ref.current, {
+        x: -24,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionEl,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 0.5,
+        },
+      });
+
+      // Row 2 drifts slightly right
+      gsap.to(row2Ref.current, {
+        x: 24,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionEl,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 0.5,
+        },
+      });
+    }, sectionEl);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
 
   const closeDialog = React.useCallback(() => {
     setSelectedMember(null);
@@ -69,54 +117,78 @@ export function TeamSection() {
   const row1 = members.slice(0, half);
   const row2 = members.slice(half);
 
-  const renderCard = (member: MemberItem, idx: number) => (
-    <button
-      key={member.id || `member-${idx}`}
-      type="button"
-      onClick={(e) => openMemberDialog(member, e)}
-      className="group text-left flex flex-col focus-visible:outline-white cursor-pointer w-full"
-      aria-haspopup="dialog"
-      aria-label={`View profile for ${member.name}, ${member.role}`}
-    >
-      {/* 4:5 Portrait Frame */}
-      <div className="relative w-full aspect-[4/5] rounded-md overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/40 transition-colors">
-        {member.photo && !member.placeholder ? (
-          <Image
-            src={member.photo}
-            alt={member.name}
-            fill
-            className="object-cover grayscale"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-white/40">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] mb-1 text-white/60">
-              Photo
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-white/30">
-              {member.role}
-            </span>
-          </div>
-        )}
-      </div>
+  const renderCard = (member: MemberItem, idx: number) => {
+    const memId = member.id || `member-${idx}`;
+    const isHovered = hoveredId === memId;
+    const isAnyHovered = hoveredId !== null;
 
-      {/* Name and Role ALWAYS visible */}
-      <div className="mt-3">
-        <h4 className="text-white font-medium text-sm sm:text-base tracking-tight leading-snug group-hover:text-white transition-colors">
-          {member.name}
-        </h4>
-        <p className="font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] text-white/50 mt-0.5">
-          {member.role}
-        </p>
-        {member.placeholder && (
-          <span className="inline-block mt-1 font-mono text-[9px] uppercase tracking-[0.16em] text-white/30">
-            [PLACEHOLDER]
-          </span>
-        )}
-      </div>
-    </button>
-  );
+    return (
+      <button
+        key={memId}
+        type="button"
+        onClick={(e) => openMemberDialog(member, e)}
+        onMouseEnter={() => setHoveredId(memId)}
+        onMouseLeave={() => setHoveredId(null)}
+        onFocus={() => setHoveredId(memId)}
+        onBlur={() => setHoveredId(null)}
+        className={`group text-left flex flex-col focus-visible:outline-white cursor-pointer w-full transition-all duration-300 will-change-transform ${
+          isAnyHovered
+            ? isHovered
+              ? "opacity-100 scale-[1.02] z-10"
+              : "opacity-40 scale-[0.98]"
+            : "opacity-90 hover:opacity-100"
+        }`}
+        aria-haspopup="dialog"
+        aria-label={`View profile for ${member.name}, ${member.role}`}
+      >
+        {/* 4:5 Portrait Frame */}
+        <div
+          className={`relative w-full aspect-[4/5] rounded-md overflow-hidden bg-neutral-900 border transition-all duration-300 ${
+            isHovered ? "border-white/60 shadow-xl" : "border-white/10 group-hover:border-white/30"
+          }`}
+        >
+          {member.photo && !member.placeholder ? (
+            <Image
+              src={member.photo}
+              alt={member.name}
+              fill
+              className="object-cover grayscale"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-white/40">
+              <span className="font-mono text-xs uppercase tracking-[0.2em] mb-1 text-white/60">
+                Photo
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/30">
+                {member.role}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Name and Role ALWAYS visible */}
+        <div className="mt-3">
+          <h4
+            className={`font-medium text-sm sm:text-base tracking-tight leading-snug transition-colors ${
+              isHovered ? "text-white" : "text-white/90"
+            }`}
+          >
+            {member.name}
+          </h4>
+          <p className="font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] text-white/50 mt-0.5">
+            {member.role}
+          </p>
+          {member.placeholder && (
+            <span className="inline-block mt-1 font-mono text-[9px] uppercase tracking-[0.16em] text-white/30">
+              [PLACEHOLDER]
+            </span>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   return (
     <Section id="team" index="05" label="TEAM" title="People & Computational Community">
@@ -132,21 +204,25 @@ export function TeamSection() {
         </div>
       </Reveal>
 
-      {/* Rows of 4:5 Uniform Portrait Cards */}
-      <div className="space-y-12">
+      {/* Rows of 4:5 Uniform Portrait Cards with Parallax Tracking */}
+      <div className="space-y-12 overflow-hidden py-2">
         {/* Row 1 */}
-        <Reveal delay={0}>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
-            {row1.map((member, idx) => renderCard(member, idx))}
-          </div>
-        </Reveal>
+        <div ref={row1Ref} className="will-change-transform">
+          <Reveal delay={0}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
+              {row1.map((member, idx) => renderCard(member, idx))}
+            </div>
+          </Reveal>
+        </div>
 
         {/* Row 2 (Offset on larger screens) */}
-        <Reveal delay={120}>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8 sm:pl-8 lg:pl-16">
-            {row2.map((member, idx) => renderCard(member, idx + half))}
-          </div>
-        </Reveal>
+        <div ref={row2Ref} className="will-change-transform">
+          <Reveal delay={120}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8 sm:pl-8 lg:pl-16">
+              {row2.map((member, idx) => renderCard(member, idx + half))}
+            </div>
+          </Reveal>
+        </div>
       </div>
 
       {/* Anchored Member Profile Dialog */}
@@ -168,7 +244,7 @@ export function TeamSection() {
             {/* Close Button */}
             <div className="flex items-center justify-between border-b border-white/[0.14] pb-4 mb-6">
               <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/50">
-                TEAM DOSSIER
+                MEMBER PROFILE
               </span>
               <button
                 type="button"

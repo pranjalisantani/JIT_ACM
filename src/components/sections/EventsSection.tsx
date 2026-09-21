@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Section } from "@/components/ui/Section";
 import { Diamond } from "@/components/ui/Diamond";
 import { Reveal } from "@/components/ui/Reveal";
+import { Magnetic } from "@/components/ui/Magnetic";
 import { EVENTS_DATA, FALLBACK_PLACEHOLDER_EVENTS } from "@/content/events";
 import { EventItem } from "@/types";
 
@@ -38,13 +39,13 @@ export function EventsSection() {
     setExpandedSlug((prev) => (prev === slug ? null : slug));
   };
 
-  const renderEventRow = (evt: EventItem) => {
+  const renderEventRow = (evt: EventItem, idx: number) => {
     const isHovered = hoveredSlug === evt.slug;
     const isAnyHovered = hoveredSlug !== null;
     const isExpanded = expandedSlug === evt.slug;
 
-    // Dimming logic for desktop: opacity only
-    const rowOpacity = isAnyHovered ? (isHovered ? 1 : 0.4) : 1;
+    // Dimming logic for desktop: opacity and subtle scale shift
+    const rowOpacity = isAnyHovered ? (isHovered ? 1 : 0.28) : 1;
 
     return (
       <article
@@ -55,11 +56,14 @@ export function EventsSection() {
         onBlur={() => setHoveredSlug(null)}
         style={{
           opacity: rowOpacity,
-          transitionProperty: "opacity",
-          transitionDuration: "300ms",
+          transform: isHovered ? "translate3d(8px, 0, 0)" : "none",
+          transitionProperty: "opacity, transform, border-color",
+          transitionDuration: "320ms",
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
         }}
-        className="relative group border-b border-white/[0.14] py-8 sm:py-12"
+        className={`relative group border-b py-8 sm:py-10 transition-colors ${
+          isHovered ? "border-white/40" : "border-white/[0.12]"
+        }`}
       >
         <button
           type="button"
@@ -68,20 +72,30 @@ export function EventsSection() {
           aria-controls={`event-detail-${evt.slug}`}
           className="w-full text-left focus-visible:outline-white cursor-pointer"
         >
-          {/* Top Row: Date & Status */}
-          <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] mb-4">
-            <span className="text-white/60">{evt.dateLabel}</span>
-            <div className="flex items-center gap-2 text-white/70">
-              <Diamond size={6} filled={evt.status === "open"} />
-              <span className="text-white/80">{evt.status.replace("-", " ")}</span>
+          {/* Top Line: Numerical Index, Date, Status */}
+          <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-white/40">
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+              <span className="text-white/70">{evt.dateLabel}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Diamond size={6} filled={isHovered || evt.status === "open"} />
+              <span className={isHovered ? "text-white" : "text-white/70"}>
+                {evt.status.replace("-", " ").toUpperCase()}
+              </span>
             </div>
           </div>
 
-          {/* Large Editorial Title */}
+          {/* Large Editorial Headline */}
           <h3
-            className="text-white font-light tracking-tight leading-[1.08] transition-colors"
+            className={`font-light tracking-tight leading-[1.08] transition-colors ${
+              isHovered ? "text-white" : "text-white/90"
+            }`}
             style={{
-              fontSize: "clamp(28px, 4.5vw, 64px)",
+              fontSize: "clamp(26px, 4vw, 56px)",
               fontWeight: 300,
             }}
           >
@@ -89,33 +103,33 @@ export function EventsSection() {
           </h3>
 
           {/* Mode & Location */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-[11px] sm:text-[12px] text-white/50 uppercase tracking-[0.16em]">
+          <div className="mt-2.5 flex flex-wrap items-center gap-3 font-mono text-[11px] sm:text-[12px] text-white/50 uppercase tracking-[0.16em]">
             <span>{evt.mode}</span>
             <span>·</span>
             <span>{evt.location}</span>
           </div>
 
-          {/* Summary (always in DOM, visible or expanded) */}
+          {/* Summary / Description */}
           <p
             id={`event-detail-${evt.slug}`}
-            className={`mt-4 text-white/70 text-sm sm:text-base font-light max-w-3xl leading-relaxed ${
-              isExpanded ? "block" : "block sm:block"
-            }`}
+            className="mt-4 text-white/70 text-sm sm:text-base font-light max-w-3xl leading-relaxed"
           >
             {evt.summary}
           </p>
         </button>
 
-        {/* Register Action & Image Preview */}
+        {/* Action Bar */}
         <div className="mt-6 flex items-center justify-between">
           {evt.registerUrl ? (
-            <a
-              href={evt.registerUrl}
-              className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white border border-white/20 px-4 py-2 hover:bg-white hover:text-black transition-colors focus-visible:outline-white"
-            >
-              <span>REGISTER</span>
-              <Diamond size={4} filled={true} />
-            </a>
+            <Magnetic maxOffset={6}>
+              <a
+                href={evt.registerUrl}
+                className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white border border-white/20 px-4 py-2 hover:bg-white hover:text-black transition-colors focus-visible:outline-white"
+              >
+                <span>REGISTER</span>
+                <Diamond size={4} filled={true} />
+              </a>
+            </Magnetic>
           ) : (
             <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/40">
               Registration TBA
@@ -129,22 +143,39 @@ export function EventsSection() {
           )}
         </div>
 
-        {/* Optional Image (Desktop Transform/Opacity only) */}
-        {evt.image && isHovered && (
+        {/* Desktop Preview Plane (Real Image or Refined Computational Blueprint) */}
+        {isHovered && (
           <div
             aria-hidden="true"
-            className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none z-10 w-64 h-40 border border-white/20 bg-neutral-900 overflow-hidden"
+            className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none z-10 w-72 h-44 border border-white/25 bg-neutral-950 shadow-2xl overflow-hidden"
             style={{
-              animation: "fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+              animation: "fadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
-            <Image
-              src={evt.image}
-              alt=""
-              fill
-              className="object-cover grayscale"
-              sizes="256px"
-            />
+            {evt.image ? (
+              <Image
+                src={evt.image}
+                alt=""
+                fill
+                className="object-cover grayscale"
+                sizes="288px"
+              />
+            ) : (
+              <div className="w-full h-full p-4 flex flex-col justify-between select-none">
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-white/50 border-b border-white/10 pb-2">
+                  <span>CONVENING // NODE</span>
+                  <Diamond size={4} filled={true} />
+                </div>
+                <div className="my-auto font-mono text-[11px] text-white/80 tracking-wider">
+                  <div className="text-white font-medium truncate">{evt.title}</div>
+                  <div className="text-white/40 mt-1 text-[10px] truncate">{evt.location}</div>
+                </div>
+                <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-widest text-white/40 border-t border-white/10 pt-2">
+                  <span>MODE: {evt.mode}</span>
+                  <span>{evt.dateLabel}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </article>
@@ -165,7 +196,7 @@ export function EventsSection() {
       <Reveal>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 sm:mb-16">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/50 max-w-md">
-            Chronological calendar of colloquia, systems workshops, and research forums.
+            Chronological calendar of colloquia, systems sessions, and research forums.
           </p>
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/40">
             {activeEvents.length} UPCOMING · ACTIVE INDEX
@@ -177,7 +208,7 @@ export function EventsSection() {
       <div className="flex flex-col">
         {activeEvents.map((evt, idx) => (
           <Reveal key={evt.slug} delay={idx * 60}>
-            {renderEventRow(evt)}
+            {renderEventRow(evt, idx)}
           </Reveal>
         ))}
       </div>
@@ -193,7 +224,7 @@ export function EventsSection() {
             <span className="text-white/40 group-open:rotate-180 transition-transform">↓</span>
           </summary>
           <div className="mt-6 flex flex-col pl-4 sm:pl-8 border-l border-white/[0.14]">
-            {pastEvents.map((evt) => renderEventRow(evt))}
+            {pastEvents.map((evt, idx) => renderEventRow(evt, idx + activeEvents.length))}
           </div>
         </details>
       )}

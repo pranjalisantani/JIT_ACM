@@ -1,16 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Section } from "@/components/ui/Section";
 import { TwoToneHeading } from "@/components/ui/TwoToneHeading";
 import { Diamond } from "@/components/ui/Diamond";
 import { Reveal } from "@/components/ui/Reveal";
 import { ABOUT_PILLARS } from "@/content/site";
+import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
+import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 
 type PillarKey = "people" | "events" | "projects" | "learning";
 
 export function AboutSection() {
   const [activePillar, setActivePillar] = useState<PillarKey>("people");
+  const diagramRef = useRef<HTMLDivElement | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const isPaused = document.documentElement.getAttribute("data-motion") === "paused";
+    if (isPaused) return;
+
+    const ScrollTrigger = registerScrollTrigger();
+    if (!ScrollTrigger) return;
+
+    const diagramEl = diagramRef.current;
+    const sectionEl = document.getElementById("about");
+    if (!diagramEl || !sectionEl) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(diagramEl, {
+        y: -24,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionEl,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 0.5,
+        },
+      });
+    }, sectionEl);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
 
   const pillarsList: { key: PillarKey; title: string; href?: string; cx: number; cy: number; leftPct: string; topPct: string }[] = [
     { key: "people", title: "People", href: "#team", cx: 200, cy: 180, leftPct: "20%", topPct: "25.7%" },
@@ -93,20 +125,32 @@ export function AboutSection() {
       </div>
 
       {/* Computational Topological Structure Diagram */}
-      <div className="relative w-full max-w-5xl mx-auto mt-12 bg-black border border-white/[0.14] rounded-lg p-4 sm:p-8 overflow-hidden">
-        {/* CSS Keyframes for slow breathing ambient motion (translate <= 6px, 10s period) */}
+      <div
+        ref={diagramRef}
+        className="relative w-full max-w-5xl mx-auto mt-12 bg-black border border-white/[0.14] rounded-lg p-4 sm:p-8 overflow-hidden will-change-transform"
+      >
+        {/* CSS Keyframes for slow breathing ambient motion & computational signal flows */}
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes nodeBreathing {
             0%, 100% { transform: translate3d(0, 0, 0); }
-            50% { transform: translate3d(0, -5px, 0); }
+            50% { transform: translate3d(0, -6px, 0); }
+          }
+          @keyframes signalFlow {
+            from { stroke-dashoffset: 24; }
+            to { stroke-dashoffset: 0; }
           }
           .animate-breathing {
             animation: nodeBreathing 10s ease-in-out infinite;
           }
-          @media (prefers-reduced-motion: reduce) {
-            .animate-breathing { animation: none !important; }
+          .animate-signal-flow {
+            stroke-dasharray: 4 6;
+            animation: signalFlow 2.4s linear infinite;
           }
-          html[data-motion="paused"] .animate-breathing {
+          @media (prefers-reduced-motion: reduce) {
+            .animate-breathing, .animate-signal-flow { animation: none !important; }
+          }
+          html[data-motion="paused"] .animate-breathing,
+          html[data-motion="paused"] .animate-signal-flow {
             animation-play-state: paused !important;
           }
         `}} />
@@ -122,69 +166,78 @@ export function AboutSection() {
             x1="200" y1="180" x2="800" y2="180"
             stroke="#ffffff"
             strokeWidth="1"
-            strokeOpacity={activePillar === "people" || activePillar === "events" ? 0.8 : 0.2}
+            strokeOpacity={activePillar === "people" || activePillar === "events" ? 0.7 : 0.15}
+            strokeDasharray="2 4"
           />
           <line
             x1="800" y1="180" x2="800" y2="520"
             stroke="#ffffff"
             strokeWidth="1"
-            strokeOpacity={activePillar === "events" || activePillar === "projects" ? 0.8 : 0.2}
+            strokeOpacity={activePillar === "events" || activePillar === "projects" ? 0.7 : 0.15}
+            strokeDasharray="2 4"
           />
           <line
             x1="800" y1="520" x2="200" y2="520"
             stroke="#ffffff"
             strokeWidth="1"
-            strokeOpacity={activePillar === "projects" || activePillar === "learning" ? 0.8 : 0.2}
+            strokeOpacity={activePillar === "projects" || activePillar === "learning" ? 0.7 : 0.15}
+            strokeDasharray="2 4"
           />
           <line
             x1="200" y1="520" x2="200" y2="180"
             stroke="#ffffff"
             strokeWidth="1"
-            strokeOpacity={activePillar === "learning" || activePillar === "people" ? 0.8 : 0.2}
+            strokeOpacity={activePillar === "learning" || activePillar === "people" ? 0.7 : 0.15}
+            strokeDasharray="2 4"
           />
 
-          {/* Radial Hairline Edges to Center Node (500, 350) */}
+          {/* Radial Hairline Edges to Center Node (500, 350) with Living Signal Flow */}
           <line
             x1="500" y1="350" x2="200" y2="180"
             stroke="#ffffff"
-            strokeWidth="1"
-            strokeOpacity={activePillar === "people" ? 0.9 : 0.25}
+            strokeWidth={activePillar === "people" ? "1.5" : "1"}
+            strokeOpacity={activePillar === "people" ? 0.95 : 0.25}
+            className={activePillar === "people" ? "animate-signal-flow" : undefined}
           />
           <line
             x1="500" y1="350" x2="800" y2="180"
             stroke="#ffffff"
-            strokeWidth="1"
-            strokeOpacity={activePillar === "events" ? 0.9 : 0.25}
+            strokeWidth={activePillar === "events" ? "1.5" : "1"}
+            strokeOpacity={activePillar === "events" ? 0.95 : 0.25}
+            className={activePillar === "events" ? "animate-signal-flow" : undefined}
           />
           <line
             x1="500" y1="350" x2="800" y2="520"
             stroke="#ffffff"
-            strokeWidth="1"
-            strokeOpacity={activePillar === "projects" ? 0.9 : 0.25}
+            strokeWidth={activePillar === "projects" ? "1.5" : "1"}
+            strokeOpacity={activePillar === "projects" ? 0.95 : 0.25}
+            className={activePillar === "projects" ? "animate-signal-flow" : undefined}
           />
           <line
             x1="500" y1="350" x2="200" y2="520"
             stroke="#ffffff"
-            strokeWidth="1"
-            strokeOpacity={activePillar === "learning" ? 0.9 : 0.25}
+            strokeWidth={activePillar === "learning" ? "1.5" : "1"}
+            strokeOpacity={activePillar === "learning" ? 0.95 : 0.25}
+            className={activePillar === "learning" ? "animate-signal-flow" : undefined}
           />
 
           {/* Satellite Hairlines */}
-          <line x1="500" y1="350" x2="360" y2="240" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.15" strokeDasharray="3 3" />
-          <line x1="500" y1="350" x2="640" y2="250" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.15" strokeDasharray="3 3" />
-          <line x1="500" y1="350" x2="480" y2="490" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.15" strokeDasharray="3 3" />
+          <line x1="500" y1="350" x2="360" y2="240" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.2" strokeDasharray="3 3" />
+          <line x1="500" y1="350" x2="640" y2="250" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.2" strokeDasharray="3 3" />
+          <line x1="500" y1="350" x2="480" y2="490" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.2" strokeDasharray="3 3" />
 
           {/* Satellite Nodes */}
           {satellites.map((sat, i) => (
             <circle key={i} cx={sat.cx} cy={sat.cy} r={sat.r} fill="#ffffff" fillOpacity="0.4" />
           ))}
 
-          {/* Center Hub: ACM FACE Diamond */}
+          {/* Center Hub: ACM FACE Diamond with Subtle Ring */}
           <g transform="translate(500, 350)">
+            <circle r="22" fill="none" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.18" strokeDasharray="2 4" />
             <rect x="-8" y="-8" width="16" height="16" fill="#000000" stroke="#ffffff" strokeWidth="1.5" transform="rotate(45)" />
             <text
               x="0"
-              y="28"
+              y="32"
               textAnchor="middle"
               fill="#ffffff"
               fontSize="11"

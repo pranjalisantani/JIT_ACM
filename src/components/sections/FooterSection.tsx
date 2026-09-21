@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Diamond } from "@/components/ui/Diamond";
 import { Hairline } from "@/components/ui/Hairline";
+import { Magnetic } from "@/components/ui/Magnetic";
 import { SITE_CONFIG, SITE_NAV_LINKS, FOOTER_DATA } from "@/content/site";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 
@@ -74,6 +75,17 @@ export function FooterSection() {
       className="w-full bg-black text-white pt-24 pb-12 px-6 sm:px-10 lg:px-16 border-t border-white/[0.14]"
     >
       <div className="max-w-[1440px] mx-auto">
+        {/* Subtle Computational System Loop Closure Echo */}
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-3 pb-8 font-mono text-[10px] text-white/30 uppercase tracking-[0.25em] select-none"
+        >
+          <div className="h-[1px] w-8 bg-white/20" />
+          <Diamond size={5} filled={false} />
+          <span>SYSTEM LOOP // TERMINUS</span>
+          <div className="h-[1px] flex-1 max-w-[120px] bg-white/20" />
+        </div>
+
         {/* Large Chapter Wordmark */}
         <div className="pb-16 sm:pb-24">
           <span
@@ -160,14 +172,16 @@ export function FooterSection() {
           <div>{FOOTER_DATA.copyright}</div>
 
           {/* Centred Reach the top button */}
-          <button
-            type="button"
-            onClick={handleReachTheTop}
-            className="px-4 py-2 border border-white/20 text-white/80 hover:text-white hover:border-white transition-colors cursor-pointer focus-visible:outline-white"
-            aria-label="Scroll smoothly to the top of the page"
-          >
-            Reach the top ↑
-          </button>
+          <Magnetic maxOffset={6}>
+            <button
+              type="button"
+              onClick={handleReachTheTop}
+              className="px-4 py-2 border border-white/20 text-white/80 hover:text-white hover:border-white transition-colors cursor-pointer focus-visible:outline-white"
+              aria-label="Scroll smoothly to the top of the page"
+            >
+              Reach the top ↑
+            </button>
+          </Magnetic>
 
           <div>CHAPTER REVISION 2026</div>
         </div>
