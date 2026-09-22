@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from "react";
 import { Diamond } from "@/components/ui/Diamond";
 import { Hairline } from "@/components/ui/Hairline";
-import { SITE_CONFIG } from "@/content/site";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
 
@@ -98,8 +97,9 @@ export function OpeningSection() {
       id="hero"
       ref={containerRef}
       aria-label="ACM FACE Chapter Introduction"
-      className="relative w-full min-h-[92vh] sm:min-h-screen flex flex-col justify-between pt-28 sm:pt-32 pb-12 sm:pb-16 px-6 sm:px-10 lg:px-16 max-w-[1440px] mx-auto text-white overflow-hidden will-change-transform"
+      className="relative w-full min-h-[92vh] sm:min-h-screen flex flex-col justify-between pt-28 sm:pt-32 pb-12 sm:pb-16 px-6 sm:px-10 lg:px-16 text-white overflow-hidden will-change-transform"
     >
+      <div className="w-full max-w-[1440px] mx-auto flex flex-col justify-between flex-1 relative">
       {/* Precision Corner Datum Crosshairs */}
       <div
         aria-hidden="true"

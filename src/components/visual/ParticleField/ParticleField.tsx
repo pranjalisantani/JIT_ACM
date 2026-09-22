@@ -143,6 +143,7 @@ export function ParticleField() {
         "gallery",
         "projects",
         "team",
+        "alumni",
         "footer",
       ];
 

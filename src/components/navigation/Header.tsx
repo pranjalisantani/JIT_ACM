@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
   { label: "Team", href: "#team" },
+  { label: "Alumni", href: "#alumni" },
 ] as const;
 
 export function Header() {
@@ -35,7 +36,7 @@ export function Header() {
 
   // IntersectionObserver to detect active section
   useEffect(() => {
-    const sectionIds = ["hero", "about", "events", "gallery", "projects", "team"];
+    const sectionIds = ["hero", "about", "events", "gallery", "projects", "team", "alumni"];
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

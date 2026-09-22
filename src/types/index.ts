@@ -120,3 +120,13 @@ export interface TeamMember {
   placeholder?: boolean;
 }
 
+export interface AlumniItem {
+  id: string;
+  name: string;
+  formerRole: string;
+  tenure: string;
+  currentRole?: string;
+  contributions: string;
+  links?: MemberLink[];
+}
+

@@ -7,6 +7,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
   { label: "Team", href: "#team" },
+  { label: "Alumni", href: "#alumni" },
 ];
 
 export const SECTIONS_META: Record<string, SectionMeta> = {
@@ -46,9 +47,15 @@ export const SECTIONS_META: Record<string, SectionMeta> = {
     title: "Team",
     tagline: "People & Computational Community",
   },
+  alumni: {
+    id: "alumni",
+    index: "06",
+    title: "Alumni",
+    tagline: "Before Us · Archival Stewardship",
+  },
   footer: {
     id: "footer",
-    index: "06",
+    index: "07",
     title: "Footer",
     tagline: "Colophon & Affiliations",
   },

@@ -63,6 +63,7 @@ export const SITE_NAV_LINKS = [
   { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
   { label: "Team", href: "#team" },
+  { label: "Alumni", href: "#alumni" },
 ] as const;
 
 export const FOOTER_DATA = {

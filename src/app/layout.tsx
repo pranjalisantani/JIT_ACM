@@ -80,7 +80,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} scroll-smooth dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} scroll-smooth dark min-h-screen bg-black antialiased`}
     >
       <head>
         <script
@@ -96,7 +96,7 @@ export default function RootLayout({
         />
         <style
           dangerouslySetInnerHTML={{
-            __html: `html, body { background-color: #000000 !important; color: #ffffff !important; } #opening-shell{display:none;}html[data-opening="1"]:not([data-opening-painted="1"]) #opening-shell{display:block;position:fixed;inset:0;background-color:#000;z-index:90;animation:shellFailsafe 12s forwards;}@keyframes shellFailsafe{0%,99%{visibility:visible;pointer-events:auto;}100%{visibility:hidden;pointer-events:none;display:none;}}`,
+            __html: `html, body { background-color: #000000 !important; background: #000000 !important; color: #ffffff !important; min-height: 100% !important; } #opening-shell{display:none;}html[data-opening="1"]:not([data-opening-painted="1"]) #opening-shell{display:block;position:fixed;inset:0;background-color:#000;z-index:90;animation:shellFailsafe 12s forwards;}@keyframes shellFailsafe{0%,99%{visibility:visible;pointer-events:auto;}100%{visibility:hidden;pointer-events:none;display:none;}}`,
           }}
         />
         <noscript>
@@ -107,7 +107,7 @@ export default function RootLayout({
           />
         </noscript>
       </head>
-      <body className="min-h-full flex flex-col bg-black text-white font-sans selection:bg-neutral-800 selection:text-white overflow-x-hidden">
+      <body className="min-h-screen flex flex-col bg-black text-white font-sans selection:bg-neutral-800 selection:text-white overflow-x-hidden">
         {/* Black failsafe shell for opening first-paint without hiding site markup */}
         <div id="opening-shell" aria-hidden="true" />
 

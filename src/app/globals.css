@@ -13,6 +13,12 @@
   --surface-card: #050505;
   --focus-ring: #ffffff;
 
+  /* Restrained Neon Accent System (One single electrical tone across site) */
+  --neon: #00f5a0;
+  --neon-glow: rgba(0, 245, 160, 0.4);
+  --neon-dim: rgba(0, 245, 160, 0.12);
+  --neon-border: rgba(0, 245, 160, 0.3);
+
   /* Typography Fluid Clamp Scale */
   --font-display: clamp(40px, 7vw, 96px);
   --font-h1: clamp(32px, 5.5vw, 72px);
@@ -37,22 +43,26 @@
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text-primary);
+  --color-neon: var(--neon);
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-html {
-  background-color: #000000;
-  color: #ffffff;
+html, body, #site-wrapper, main {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
   color-scheme: dark;
+  min-height: 100vh;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 body {
-  background-color: #000000;
-  color: #ffffff;
   font-family: var(--font-sans);
   overflow-x: hidden;
-  min-height: 100vh;
 }
 
 ::selection {
