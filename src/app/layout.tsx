@@ -96,7 +96,7 @@ export default function RootLayout({
         />
         <style
           dangerouslySetInnerHTML={{
-            __html: `#opening-shell{display:none;}html[data-opening="1"]:not([data-opening-painted="1"]) #opening-shell{display:block;position:fixed;inset:0;background-color:#000;z-index:90;animation:shellFailsafe 12s forwards;}@keyframes shellFailsafe{0%,99%{visibility:visible;pointer-events:auto;}100%{visibility:hidden;pointer-events:none;display:none;}}`,
+            __html: `html, body { background-color: #000000 !important; color: #ffffff !important; } #opening-shell{display:none;}html[data-opening="1"]:not([data-opening-painted="1"]) #opening-shell{display:block;position:fixed;inset:0;background-color:#000;z-index:90;animation:shellFailsafe 12s forwards;}@keyframes shellFailsafe{0%,99%{visibility:visible;pointer-events:auto;}100%{visibility:hidden;pointer-events:none;display:none;}}`,
           }}
         />
         <noscript>

@@ -15,33 +15,26 @@ export function GallerySection() {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
 
-  const [isManualPaused, setIsManualPaused] = useState(false);
-  const [isInteracting, setIsInteracting] = useState(false);
-  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [centerIdx, setCenterIdx] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const offsetRef = useRef(0);
   const contentWidthRef = useRef(0);
   const isPointerDownRef = useRef(false);
   const startXRef = useRef(0);
   const startOffsetRef = useRef(0);
-  const itemPositionsRef = useRef<number[]>([]);
 
-  // Update cached layout metrics on resize
+  // Measure track width
   const measure = useCallback(() => {
     if (!trackRef.current) return;
-    const realChildren = trackRef.current.querySelectorAll<HTMLElement>("[data-gallery-real='true']");
+    const realChildren = trackRef.current.querySelectorAll<HTMLElement>(
+      "[data-gallery-real='true']"
+    );
     if (!realChildren.length) return;
 
     let totalWidth = 0;
-    const positions: number[] = [];
-
     realChildren.forEach((child) => {
-      positions.push(child.offsetLeft);
-      totalWidth += child.offsetWidth + 24; // 24px gap
+      totalWidth += child.offsetWidth + 32; // 32px gap
     });
-
-    itemPositionsRef.current = positions;
     contentWidthRef.current = totalWidth;
   }, []);
 
@@ -51,15 +44,16 @@ export function GallerySection() {
     return () => window.removeEventListener("resize", measure);
   }, [measure]);
 
-  // Handle auto-drift with GSAP ticker
+  // Smooth continuous auto-drift with GSAP ticker
   useEffect(() => {
     if (reducedMotion) return;
 
-    const driftSpeed = 22; // px per second
+    const driftSpeed = 24; // px per second
 
     const tick = (time: number, deltaTime: number) => {
-      if (isManualPaused || isInteracting) return;
-      const isSitePaused = document.documentElement.getAttribute("data-motion") === "paused";
+      if (isPaused || isPointerDownRef.current) return;
+      const isSitePaused =
+        document.documentElement.getAttribute("data-motion") === "paused";
       if (isSitePaused) return;
 
       const dt = deltaTime / 1000;
@@ -69,263 +63,194 @@ export function GallerySection() {
         if (offsetRef.current >= contentWidthRef.current) {
           offsetRef.current = offsetRef.current % contentWidthRef.current;
         } else if (offsetRef.current < 0) {
-          offsetRef.current = (offsetRef.current % contentWidthRef.current) + contentWidthRef.current;
+          offsetRef.current =
+            (offsetRef.current % contentWidthRef.current) +
+            contentWidthRef.current;
         }
       }
 
       if (trackRef.current) {
         trackRef.current.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
       }
-
-      // Calculate center emphasis without DOM layout reads
-      if (containerRef.current && itemPositionsRef.current.length > 0) {
-        const viewportCenter = containerRef.current.offsetWidth / 2;
-        const currentRelativeCenter = (offsetRef.current + viewportCenter) % (contentWidthRef.current || 1);
-        let closestDist = Infinity;
-        let closestIndex = 0;
-
-        itemPositionsRef.current.forEach((pos, idx) => {
-          const dist = Math.abs(pos - currentRelativeCenter);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestIndex = idx;
-          }
-        });
-
-        setCenterIdx(closestIndex);
-      }
     };
 
     gsap.ticker.add(tick);
+    return () => gsap.ticker.remove(tick);
+  }, [isPaused, reducedMotion]);
 
-    return () => {
-      gsap.ticker.remove(tick);
-    };
-  }, [reducedMotion, isManualPaused, isInteracting]);
-
-  // Restart drift 2.5s after interaction ends
-  const markInteraction = useCallback(() => {
-    setIsInteracting(true);
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      setIsInteracting(false);
-    }, 2500);
-  }, []);
-
-  // Pointer drag controls (with touch-action: pan-y)
+  // Pointer drag controls for intuitive scrub
   const onPointerDown = (e: React.PointerEvent) => {
+    if (reducedMotion) return;
     isPointerDownRef.current = true;
     startXRef.current = e.clientX;
     startOffsetRef.current = offsetRef.current;
-    markInteraction();
+    if (trackRef.current) {
+      trackRef.current.style.cursor = "grabbing";
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isPointerDownRef.current) return;
-    const dx = e.clientX - startXRef.current;
-    offsetRef.current = startOffsetRef.current - dx;
+    const deltaX = e.clientX - startXRef.current;
+    offsetRef.current = startOffsetRef.current - deltaX;
+
+    if (contentWidthRef.current > 0) {
+      if (offsetRef.current >= contentWidthRef.current) {
+        offsetRef.current = offsetRef.current % contentWidthRef.current;
+      } else if (offsetRef.current < 0) {
+        offsetRef.current =
+          (offsetRef.current % contentWidthRef.current) + contentWidthRef.current;
+      }
+    }
 
     if (trackRef.current) {
       trackRef.current.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
     }
-    markInteraction();
   };
 
   const onPointerUp = () => {
     isPointerDownRef.current = false;
-  };
-
-  // Horizontal wheel handler
-  const onWheel = (e: React.WheelEvent) => {
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      offsetRef.current += e.deltaX;
-      if (trackRef.current) {
-        trackRef.current.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
-      }
-      markInteraction();
-    }
-  };
-
-  // Non-drag alternatives (Previous / Next / Arrow keys)
-  const stepOffset = (direction: "prev" | "next") => {
-    markInteraction();
-    const step = 320;
-    offsetRef.current += direction === "next" ? step : -step;
     if (trackRef.current) {
-      trackRef.current.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
+      trackRef.current.style.cursor = "grab";
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      stepOffset("next");
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      stepOffset("prev");
+  const handleStep = (direction: "left" | "right") => {
+    const step = 420;
+    offsetRef.current += direction === "right" ? step : -step;
+    if (contentWidthRef.current > 0) {
+      if (offsetRef.current >= contentWidthRef.current) {
+        offsetRef.current = offsetRef.current % contentWidthRef.current;
+      } else if (offsetRef.current < 0) {
+        offsetRef.current =
+          (offsetRef.current % contentWidthRef.current) + contentWidthRef.current;
+      }
+    }
+    if (trackRef.current) {
+      gsap.to(trackRef.current, {
+        x: -offsetRef.current,
+        duration: 0.5,
+        ease: "power2.out",
+      });
     }
   };
 
-  const renderPhotoCard = (photo: GalleryPhoto, idx: number, isClone = false) => {
-    const isCenter = !isClone && centerIdx === idx;
-    const verticalOffsets = [-16, 18, -10, 14, -20, 12, -8, 16];
-    const vOffset = verticalOffsets[idx % verticalOffsets.length];
-
-    const aspectStyles: Record<string, string> = {
-      "4:5": "w-[260px] sm:w-[300px] h-[325px] sm:h-[375px]",
-      "1:1": "w-[280px] sm:w-[320px] h-[280px] sm:h-[320px]",
-      "16:10": "w-[360px] sm:w-[440px] h-[225px] sm:h-[275px]",
-      "3:4": "w-[270px] sm:w-[300px] h-[360px] sm:h-[400px]",
-    };
-
-    // Derive aspect ratio from width and height
-    const ratioVal = photo.width / photo.height;
-    let aspectClass = aspectStyles["16:10"];
-    if (Math.abs(ratioVal - 0.8) < 0.05) aspectClass = aspectStyles["4:5"];
-    else if (Math.abs(ratioVal - 1.0) < 0.05) aspectClass = aspectStyles["1:1"];
-    else if (Math.abs(ratioVal - 0.75) < 0.05) aspectClass = aspectStyles["3:4"];
+  const renderStreamItem = (photo: GalleryPhoto, idx: number, isClone: boolean = false) => {
+    // Dynamic width based on aspect ratio
+    const widthStyle =
+      photo.width > photo.height
+        ? "w-[440px] sm:w-[540px]"
+        : photo.width === photo.height
+        ? "w-[360px] sm:w-[420px]"
+        : "w-[320px] sm:w-[380px]";
 
     return (
       <div
         key={isClone ? `clone-${idx}` : `real-${idx}`}
         data-gallery-real={!isClone ? "true" : undefined}
         aria-hidden={isClone ? "true" : undefined}
-        style={{
-          transform: reducedMotion ? "none" : `translate3d(0, ${vOffset}px, 0)`,
-        }}
-        className={`shrink-0 flex flex-col justify-end transition-all duration-500 will-change-transform ${
-          isCenter
-            ? "opacity-100 scale-[1.03] z-10"
-            : "opacity-65 hover:opacity-100 scale-[0.97] hover:scale-100"
-        }`}
+        className={`shrink-0 flex flex-col justify-end ${widthStyle} group select-none`}
       >
-        <div
-          className={`relative rounded-md overflow-hidden bg-neutral-900 border transition-all duration-300 ${
-            isCenter ? "border-white/40 shadow-2xl" : "border-white/10"
-          } ${aspectClass}`}
-        >
-          {photo.src && !photo.placeholder ? (
-            <Image
-              src={photo.src}
-              alt={photo.alt}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 300px, 440px"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-white/40">
-              <span className="font-mono text-xs uppercase tracking-[0.2em] mb-2 text-white/60">
-                Photo
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-white/30">
-                {photo.alt}
-              </span>
-            </div>
-          )}
+        {/* Photo Container: Retains rich authentic natural color */}
+        <div className="relative h-[340px] sm:h-[400px] w-full overflow-hidden border border-white/20 bg-neutral-950 transition-all duration-300 group-hover:border-white/50">
+          <Image
+            src={photo.src}
+            alt={photo.alt}
+            fill
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            sizes="(max-width: 768px) 380px, 540px"
+            loading="lazy"
+          />
 
-          {photo.year && (
-            <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono uppercase tracking-wider text-white/70">
-              {photo.year}
-            </div>
-          )}
-        </div>
-
-        {/* Caption */}
-        {!isClone && (
-          <div className="mt-3 max-w-[280px]">
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/80 line-clamp-1">
-              {photo.alt}
-            </p>
-            {photo.caption && (
-              <p className="font-light text-xs text-white/50 line-clamp-2 mt-0.5">
-                {photo.caption}
-              </p>
-            )}
+          {/* Year Badge */}
+          <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/75 border border-white/15 text-[10px] font-mono uppercase tracking-widest text-white/80 backdrop-blur-sm">
+            {photo.year || "2026"}
           </div>
-        )}
+
+          {/* Subtle Bottom Vignette on Hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity pointer-events-none" />
+
+          {/* Quick Caption Overlay on Hover */}
+          <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
+            <h4 className="font-mono text-xs uppercase tracking-[0.16em] text-white font-medium truncate">
+              {photo.alt}
+            </h4>
+            <p className="mt-1 text-xs text-white/70 font-light line-clamp-2">
+              {photo.caption}
+            </p>
+          </div>
+        </div>
       </div>
     );
   };
 
   return (
-    <Section id="gallery" index="03" label="GALLERY" title="Visual Documentation & Memory Stream">
-      {/* Header with Accessibility Controls */}
+    <Section
+      id="gallery"
+      index="03"
+      label="GALLERY"
+      title="Visual Chronicle & Memory Stream"
+    >
+      {/* Header with Narrative Description & Stream Controls */}
       <Reveal>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/50 max-w-md">
-              A continuous, chronological visual stream recording student colloquia, convenings, and research build sessions.
-            </p>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 border-b border-white/[0.12] pb-6">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/50 max-w-md">
+            A continuous photographic record documenting student research, lab sessions, whiteboard proofs, and night hackathons.
+          </p>
 
-          {/* Controls: Pause / Play & Step Prev / Next */}
-          <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.16em]">
+          <div className="flex items-center gap-4">
+            {/* Pause / Resume Button */}
             <button
               type="button"
-              onClick={() => setIsManualPaused(!isManualPaused)}
-              className="px-3 py-1.5 border border-white/20 hover:border-white text-white/80 hover:text-white transition-colors flex items-center gap-2 cursor-pointer focus-visible:outline-white"
-              aria-label={isManualPaused ? "Resume visual stream drift" : "Pause visual stream drift"}
+              onClick={() => setIsPaused((prev) => !prev)}
+              aria-label={isPaused ? "Resume visual stream drift" : "Pause visual stream drift"}
+              className="px-3.5 py-1.5 border border-white/20 hover:border-white text-white font-mono text-[11px] uppercase tracking-wider transition-colors inline-flex items-center gap-2 focus-visible:outline-white cursor-pointer"
             >
-              <Diamond size={5} filled={!isManualPaused} />
-              <span>{isManualPaused ? "PLAY" : "PAUSE"}</span>
+              <Diamond size={4} filled={!isPaused} />
+              <span>{isPaused ? "STREAM PAUSED" : "STREAM ACTIVE"}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => stepOffset("prev")}
-              className="px-3 py-1.5 border border-white/20 hover:border-white text-white/80 hover:text-white transition-colors cursor-pointer focus-visible:outline-white"
-              aria-label="Previous gallery image"
-            >
-              ←
-            </button>
-
-            <button
-              type="button"
-              onClick={() => stepOffset("next")}
-              className="px-3 py-1.5 border border-white/20 hover:border-white text-white/80 hover:text-white transition-colors cursor-pointer focus-visible:outline-white"
-              aria-label="Next gallery image"
-            >
-              →
-            </button>
+            {/* Step Left / Right Controls */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleStep("left")}
+                aria-label="Scroll stream left"
+                className="w-8 h-8 border border-white/20 hover:border-white text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-white cursor-pointer"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStep("right")}
+                aria-label="Scroll stream right"
+                className="w-8 h-8 border border-white/20 hover:border-white text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-white cursor-pointer"
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
       </Reveal>
 
-      {/* Gallery Track Container */}
+      {/* Horizontal Drifting / Scrubbable Photographic Stream */}
       <div
         ref={containerRef}
-        tabIndex={0}
-        role="region"
-        aria-label="Continuous memory stream. Use Left and Right arrow keys to navigate."
-        onKeyDown={handleKeyDown}
+        className="relative w-full overflow-hidden py-4 cursor-grab select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onWheel={onWheel}
-        onMouseEnter={() => setIsInteracting(true)}
-        onMouseLeave={() => markInteraction()}
-        onFocus={() => setIsInteracting(true)}
-        onBlur={() => markInteraction()}
-        className={`relative w-full overflow-hidden select-none cursor-grab active:cursor-grabbing focus-visible:outline-white py-4 ${
-          reducedMotion ? "overflow-x-auto scrollbar-none" : ""
-        }`}
-        style={{ touchAction: "pan-y" }}
+        onPointerLeave={onPointerUp}
       >
         <div
           ref={trackRef}
-          className="flex items-end gap-6 w-max"
-          style={{
-            willChange: "transform",
-          }}
+          className="flex items-center gap-8 will-change-transform"
+          style={{ width: "max-content" }}
         >
-          {/* Primary Real DOM Items */}
-          {GALLERY_ITEMS.map((photo, idx) => renderPhotoCard(photo, idx, false))}
-
-          {/* Cloned Items for seamless continuous looping (bounded to 2x items) */}
-          {!reducedMotion &&
-            GALLERY_ITEMS.map((photo, idx) => renderPhotoCard(photo, idx, true))}
+          {/* Primary Set */}
+          {GALLERY_ITEMS.map((item, idx) => renderStreamItem(item, idx, false))}
+          {/* Seamless Infinite Clone Set */}
+          {GALLERY_ITEMS.map((item, idx) => renderStreamItem(item, idx, true))}
         </div>
       </div>
     </Section>
