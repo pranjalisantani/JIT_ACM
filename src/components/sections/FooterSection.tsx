@@ -123,7 +123,10 @@ export function FooterSection() {
         </div>
 
         {/* Top Datum crosshairs */}
-        <div className="relative z-10 flex items-center justify-between font-mono text-[11px] sm:text-xs uppercase tracking-[0.24em] text-white/60 border-b border-white/[0.14] pb-4">
+        <div
+          className="relative z-10 flex items-center justify-between font-mono text-[11px] sm:text-xs uppercase tracking-[0.24em] text-white/60 border-b pb-4"
+          style={{ borderColor: "var(--neon-border)" }}
+        >
           <div className="flex items-center gap-3">
             <Diamond size={5} filled={true} />
             <span>ACM FACE // CONTINUOUS HORIZON</span>
@@ -153,9 +156,15 @@ export function FooterSection() {
         </div>
 
         {/* Bottom Reveal Indicator */}
-        <div className="relative z-10 flex items-center justify-between font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] text-white/50 border-t border-white/[0.14] pt-4">
+        <div
+          className="relative z-10 flex items-center justify-between font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] text-white/50 border-t pt-4"
+          style={{ borderColor: "var(--neon-border)" }}
+        >
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ backgroundColor: "var(--neon)", boxShadow: "0 0 8px var(--neon-glow)" }}
+            />
             <span>CONTINUE SCROLL TO REVEAL COLOPHON</span>
           </div>
           <span>↓</span>
@@ -167,13 +176,15 @@ export function FooterSection() {
         id="footer"
         ref={footerContentRef}
         aria-label="Colophon and Site Index"
-        className="relative z-10 w-full bg-black text-white pt-24 pb-12 px-6 sm:px-10 lg:px-16 border-t border-white/[0.14]"
+        className="relative z-10 w-full bg-black text-white pt-24 pb-12 px-6 sm:px-10 lg:px-16 border-t"
+        style={{ borderColor: "var(--neon-border)" }}
       >
         <div className="max-w-[1440px] mx-auto">
           {/* Subtle Computational System Loop Closure Echo */}
           <div
             aria-hidden="true"
-            className="flex items-center gap-3 pb-8 font-mono text-[10px] text-white/30 uppercase tracking-[0.25em] select-none"
+            className="flex items-center gap-3 pb-8 font-mono text-[10px] uppercase tracking-[0.25em] select-none"
+            style={{ color: "var(--neon-dim)" }}
           >
             <div className="h-[1px] w-8 bg-white/20" />
             <Diamond size={5} filled={false} />
@@ -271,7 +282,8 @@ export function FooterSection() {
               <button
                 type="button"
                 onClick={handleReachTheTop}
-                className="px-4 py-2 border border-white/20 text-white/80 hover:text-white hover:border-white transition-colors cursor-pointer focus-visible:outline-white"
+                className="px-4 py-2 border text-white/80 hover:text-white transition-colors cursor-pointer focus-visible:outline-white"
+                style={{ borderColor: "var(--neon-border)" }}
                 aria-label="Scroll smoothly to the top of the page"
               >
                 Reach the top ↑

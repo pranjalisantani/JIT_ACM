@@ -5,13 +5,10 @@ import { Diamond } from "@/components/ui/Diamond";
 import { Magnetic } from "@/components/ui/Magnetic";
 
 const NAV_LINKS = [
-  { label: "Home", href: "#hero" },
   { label: "About", href: "#about" },
   { label: "Events", href: "#events" },
-  { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
   { label: "Team", href: "#team" },
-  { label: "Alumni", href: "#alumni" },
 ] as const;
 
 export function Header() {
@@ -41,7 +38,8 @@ export function Header() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
+            const id = entry.target.id;
+            setActiveSection(id === "alumni" ? "team" : id);
           }
         });
       },
@@ -128,10 +126,10 @@ export function Header() {
               backgroundColor: scrolled ? "rgba(0, 0, 0, 0.86)" : "rgba(0, 0, 0, 0.72)",
               backdropFilter: scrolled ? "blur(20px)" : "blur(16px)",
               WebkitBackdropFilter: scrolled ? "blur(20px)" : "blur(16px)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              border: "1px solid var(--neon-border)",
               boxShadow: scrolled
-                ? "0 0 45px -5px rgba(255, 255, 255, 0.08), 0 12px 32px -8px rgba(0, 0, 0, 0.85)"
-                : "0 0 35px -5px rgba(255, 255, 255, 0.05), 0 8px 24px -6px rgba(0, 0, 0, 0.7)",
+                ? "0 0 36px -8px var(--neon-glow), 0 12px 32px -8px rgba(0, 0, 0, 0.85)"
+                : "0 0 28px -10px var(--neon-glow), 0 8px 24px -6px rgba(0, 0, 0, 0.7)",
               transition: "background-color 300ms ease, box-shadow 300ms ease",
             }}
             className="flex items-center gap-4 sm:gap-6 lg:gap-8 px-4 sm:px-6 py-2 rounded-full text-xs font-mono text-white"
@@ -163,6 +161,17 @@ export function Header() {
                   >
                     {isActive && <Diamond size={4} filled={true} />}
                     <span>{link.label}</span>
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 right-0 -bottom-[3px] h-px"
+                        style={{
+                          backgroundColor: "var(--neon)",
+                          opacity: 0.55,
+                          boxShadow: "0 0 8px var(--neon-glow)",
+                        }}
+                      />
+                    )}
                   </a>
                 );
               })}
@@ -224,7 +233,8 @@ export function Header() {
               <Magnetic maxOffset={6}>
                 <a
                   href="#about"
-                  className="px-3.5 py-1.5 rounded-full border border-white/20 bg-white/5 hover:bg-white hover:text-black font-mono text-[11px] uppercase tracking-wider text-white transition-all flex items-center gap-1.5 focus-visible:outline-white"
+                  style={{ borderColor: "var(--neon-border)", backgroundColor: "rgba(0, 245, 160, 0.06)" }}
+                  className="px-3.5 py-1.5 rounded-full border hover:bg-white hover:text-black font-mono text-[11px] uppercase tracking-wider text-white transition-all flex items-center gap-1.5 focus-visible:outline-white"
                 >
                   <span>Explore</span>
                   <span className="text-[10px]">↓</span>

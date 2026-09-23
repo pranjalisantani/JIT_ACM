@@ -60,10 +60,8 @@ export const ABOUT_PILLARS: Record<"people" | "events" | "projects" | "learning"
 export const SITE_NAV_LINKS = [
   { label: "About", href: "#about" },
   { label: "Events", href: "#events" },
-  { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
   { label: "Team", href: "#team" },
-  { label: "Alumni", href: "#alumni" },
 ] as const;
 
 export const FOOTER_DATA = {

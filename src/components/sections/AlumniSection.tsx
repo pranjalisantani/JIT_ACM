@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { Section } from "@/components/ui/Section";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Diamond } from "@/components/ui/Diamond";
-import { Reveal } from "@/components/ui/Reveal";
 import { ALUMNI_MEMBERS } from "@/content/alumni";
+import { AlumniItem, MemberLink } from "@/types";
+import { usePrefersReducedMotion } from "@/lib/motion/tokens";
+import { gsap } from "@/lib/motion/gsap";
 
 function GitHubIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
@@ -36,117 +37,243 @@ function LinkedInIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
+function circularOffset(index: number, active: number, total: number): number {
+  let delta = index - active;
+  const half = Math.floor(total / 2);
+  if (delta > half) delta -= total;
+  if (delta < -half) delta += total;
+  return delta;
+}
+
+function memberInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2);
+}
+
+function findLink(links: MemberLink[] | undefined, kind: "github" | "linkedin"): string | undefined {
+  return links?.find((link) => link.label.toLowerCase().includes(kind))?.url;
+}
+
+function useNeighborReach() {
+  const [reach, setReach] = useState(2);
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      if (width < 1024) setReach(1);
+      else setReach(2);
+    };
+
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return reach;
+}
+
 export function AlumniSection() {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const streamRef = useRef<HTMLDivElement | null>(null);
+  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+  const neighborReach = useNeighborReach();
+
+  const total = ALUMNI_MEMBERS.length;
+
+  const goToMember = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex === activeIndex || targetIndex < 0 || targetIndex >= total) return;
+      setActiveIndex(targetIndex);
+
+      if (reducedMotion || !streamRef.current) return;
+      gsap.fromTo(
+        streamRef.current,
+        { opacity: 0.82 },
+        { opacity: 1, duration: 0.35, ease: "power2.out" }
+      );
+    },
+    [activeIndex, reducedMotion, total]
+  );
+
+  const nextMember = useCallback(() => {
+    goToMember((activeIndex + 1) % total);
+  }, [activeIndex, total, goToMember]);
+
+  const prevMember = useCallback(() => {
+    goToMember((activeIndex - 1 + total) % total);
+  }, [activeIndex, total, goToMember]);
+
+  useEffect(() => {
+    if (reducedMotion || isPaused) {
+      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
+      return;
+    }
+
+    autoPlayRef.current = setTimeout(() => {
+      nextMember();
+    }, 5600);
+
+    return () => {
+      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
+    };
+  }, [activeIndex, isPaused, nextMember, reducedMotion]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") nextMember();
+    else if (e.key === "ArrowLeft") prevMember();
+  };
 
   return (
-    <Section
+    <section
       id="alumni"
-      index="06"
-      label="ALUMNI"
-      title="Before Us · The Archival Memory Layer"
+      aria-labelledby="alumni-heading"
+      className="relative w-full text-white bg-transparent pt-12 sm:pt-16"
     >
-      {/* Narrative Transition from Current Team into Before Us */}
-      <Reveal>
-        <div className="mb-12 border-b border-white/[0.12] pb-8">
-          <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.24em] text-white/50 mb-3">
-            <Diamond size={5} filled={false} />
-            <span>TRANSITION // BEFORE US</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-baseline">
-            <div className="md:col-span-7">
-              <h3
-                className="text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight leading-snug"
-                style={{ fontWeight: 300 }}
-              >
-                Those who established the foundations before us.
-              </h3>
-            </div>
-            <div className="md:col-span-5">
-              <p className="text-white/60 text-xs sm:text-sm font-light leading-relaxed">
-                The current cohort builds on the rigorous research, systems charters, and curriculum
-                laid down by preceding chapter stewards. This archival layer honors their enduring
-                contributions.
-              </p>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
-      {/* Progressive Archival Roster */}
-      <div className="border border-white/[0.12] bg-neutral-950/60 divide-y divide-white/[0.10]">
-        {ALUMNI_MEMBERS.map((alumnus, idx) => {
-          const isHovered = hoveredId === alumnus.id;
-          const isAnyHovered = hoveredId !== null;
-          const rowOpacity = isAnyHovered ? (isHovered ? 1 : 0.45) : 1;
-
-          return (
-            <article
-              key={alumnus.id}
-              onMouseEnter={() => setHoveredId(alumnus.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              onFocus={() => setHoveredId(alumnus.id)}
-              onBlur={() => setHoveredId(null)}
-              className="p-6 sm:p-8 lg:p-10 transition-all duration-300 group hover:bg-white/[0.02]"
-              style={{ opacity: rowOpacity }}
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-baseline">
-                {/* Column 1: Historical Index & Tenure */}
-                <div className="lg:col-span-3 space-y-1">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
-                    <span className="text-white/25">0{idx + 1}</span>
-                    <span>·</span>
-                    <span className="text-white/80">{alumnus.tenure}</span>
-                  </div>
-                  <div className="font-mono text-xs text-white/50 uppercase tracking-wider">
-                    {alumnus.currentRole || "Alumnus"}
-                  </div>
-                </div>
-
-                {/* Column 2: Name & Former Role */}
-                <div className="lg:col-span-4 space-y-1">
-                  <h4 className="text-2xl sm:text-3xl font-light text-white tracking-tight group-hover:text-white transition-colors">
-                    {alumnus.name}
-                  </h4>
-                  <p className="font-mono text-xs uppercase tracking-wider text-white/60">
-                    {alumnus.formerRole}
-                  </p>
-                </div>
-
-                {/* Column 3: Foundation Contribution Note */}
-                <div className="lg:col-span-4">
-                  <p className="text-xs sm:text-sm text-white/70 font-light leading-relaxed">
-                    {alumnus.contributions}
-                  </p>
-                </div>
-
-                {/* Column 4: Links */}
-                <div className="lg:col-span-1 flex items-center justify-start lg:justify-end gap-2.5">
-                  <a
-                    href="https://github.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${alumnus.name} on GitHub`}
-                    className="w-8 h-8 rounded-xs border border-white/20 hover:border-white text-white/60 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                  >
-                    <GitHubIcon className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href="https://linkedin.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${alumnus.name} on LinkedIn`}
-                    className="w-8 h-8 rounded-xs border border-white/20 hover:border-white text-white/60 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                  >
-                    <LinkedInIcon className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            </article>
-          );
-        })}
+      <div className="flex items-center gap-3 mb-8 border-t border-white/[0.10] pt-10">
+        <Diamond size={5} filled={false} />
+        <h2
+          id="alumni-heading"
+          className="font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.24em] text-white/45"
+        >
+          BEFORE US // ARCHIVE
+        </h2>
       </div>
-    </Section>
+
+      <div
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onFocus={() => setIsPaused(true)}
+        onBlur={() => setIsPaused(false)}
+        className="relative w-full overflow-hidden focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+        aria-label="Alumni archive stream. Use arrow keys to step between alumni."
+      >
+        <div
+          ref={streamRef}
+          aria-live="polite"
+          className="relative h-[260px] sm:h-[280px] lg:h-[300px] flex items-end justify-center"
+        >
+          {ALUMNI_MEMBERS.map((alumnus: AlumniItem, idx) => {
+            const offset = circularOffset(idx, activeIndex, total);
+            const distance = Math.abs(offset);
+            if (distance > neighborReach) return null;
+
+            const isFocus = offset === 0;
+            const scale = isFocus ? 1 : distance === 1 ? 0.78 : 0.62;
+            const opacity = isFocus ? 1 : distance === 1 ? 0.4 : 0.18;
+            const slot = neighborReach === 1 ? 108 : isFocus ? 150 : 112;
+            const githubUrl = findLink(alumnus.links, "github");
+            const linkedinUrl = findLink(alumnus.links, "linkedin");
+
+            return (
+              <div
+                key={alumnus.id}
+                className="absolute bottom-0 flex flex-col items-center"
+                style={{
+                  transform: `translateX(${offset * slot}px) scale(${scale})`,
+                  opacity,
+                  zIndex: 10 - distance,
+                  transition: reducedMotion
+                    ? "none"
+                    : "transform 550ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => goToMember(idx)}
+                  aria-current={isFocus ? "true" : undefined}
+                  aria-label={`${alumnus.name}, ${alumnus.formerRole}`}
+                  className="cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-white"
+                >
+                  <div
+                    className={`relative mx-auto mb-3 overflow-hidden border bg-neutral-950/30 flex items-center justify-center ${
+                      isFocus
+                        ? "w-[120px] h-[144px] sm:w-[132px] sm:h-[156px] lg:w-[148px] lg:h-[176px] border-white/30"
+                        : "w-[76px] h-[98px] sm:w-[84px] sm:h-[108px] lg:w-[96px] lg:h-[120px] border-white/10"
+                    }`}
+                  >
+                    <span
+                      className={`font-mono tracking-[0.18em] ${
+                        isFocus ? "text-base text-white/70" : "text-[10px] text-white/35"
+                      }`}
+                    >
+                      {memberInitials(alumnus.name)}
+                    </span>
+                  </div>
+
+                  {isFocus ? (
+                    <div className="w-[168px] sm:w-[188px] lg:w-[200px] mx-auto text-center space-y-1">
+                      <h3 className="text-base sm:text-lg font-light tracking-tight text-white">
+                        {alumnus.name}
+                      </h3>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/50 leading-snug">
+                        {alumnus.formerRole}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="w-[92px] sm:w-[100px] mx-auto text-center font-mono text-[10px] uppercase tracking-[0.12em] text-white/35 truncate">
+                      {alumnus.name.split(" ")[0]}
+                    </p>
+                  )}
+                </button>
+
+                {isFocus && (githubUrl || linkedinUrl) && (
+                  <div className="mt-2.5 flex items-center justify-center gap-2">
+                    {githubUrl && (
+                      <a
+                        href={githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${alumnus.name} on GitHub`}
+                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
+                      >
+                        <GitHubIcon />
+                      </a>
+                    )}
+                    {linkedinUrl && (
+                      <a
+                        href={linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${alumnus.name} on LinkedIn`}
+                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
+                      >
+                        <LinkedInIcon />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={prevMember}
+            aria-label="Previous alumnus"
+            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={nextMember}
+            aria-label="Next alumnus"
+            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

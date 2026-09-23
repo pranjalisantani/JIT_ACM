@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { Section } from "@/components/ui/Section";
 import { Diamond } from "@/components/ui/Diamond";
-import { Reveal } from "@/components/ui/Reveal";
+import { AlumniSection } from "@/components/sections/AlumniSection";
 import { TEAM_MEMBERS } from "@/content/team";
+import { MemberItem, MemberLink } from "@/types";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { gsap } from "@/lib/motion/gsap";
 
@@ -38,41 +40,99 @@ function LinkedInIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function circularOffset(index: number, active: number, total: number): number {
+  let delta = index - active;
+  const half = Math.floor(total / 2);
+  if (delta > half) delta -= total;
+  if (delta < -half) delta += total;
+  return delta;
+}
+
+function memberInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2);
+}
+
+function findLink(links: MemberLink[] | undefined, kind: "github" | "linkedin"): string | undefined {
+  return links?.find((link) => link.label.toLowerCase().includes(kind))?.url;
+}
+
+function useNeighborReach() {
+  const [reach, setReach] = useState(2);
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      if (width < 640) setReach(1);
+      else if (width < 1024) setReach(1);
+      else setReach(2);
+    };
+
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return reach;
+}
+
+function MemberPortrait({
+  member,
+  focused,
+}: {
+  member: MemberItem;
+  focused: boolean;
+}) {
+  const initials = memberInitials(member.name);
+
+  if (member.photo) {
+    return (
+      <Image
+        src={member.photo}
+        alt=""
+        fill
+        className={`object-cover ${focused ? "grayscale-0" : "grayscale"}`}
+        sizes={focused ? "220px" : "140px"}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={`font-mono tracking-[0.18em] ${
+        focused ? "text-lg text-white/80" : "text-xs text-white/40"
+      }`}
+    >
+      {initials}
+    </span>
+  );
+}
+
 export function TeamSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<HTMLDivElement | null>(null);
+  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reducedMotion = usePrefersReducedMotion();
+  const neighborReach = useNeighborReach();
 
   const totalMembers = TEAM_MEMBERS.length;
-  const currentMember = TEAM_MEMBERS[activeIndex] || TEAM_MEMBERS[0];
 
   const goToMember = useCallback(
     (targetIndex: number) => {
       if (targetIndex === activeIndex || targetIndex < 0 || targetIndex >= totalMembers) return;
+      setActiveIndex(targetIndex);
 
-      if (reducedMotion || !stageRef.current) {
-        setActiveIndex(targetIndex);
-        return;
-      }
+      if (reducedMotion || !streamRef.current) return;
 
-      // GSAP continuous human stream transition
-      const tl = gsap.timeline();
-      tl.to(stageRef.current, {
-        opacity: 0,
-        y: -10,
-        duration: 0.22,
-        ease: "power2.in",
-        onComplete: () => {
-          setActiveIndex(targetIndex);
-        },
-      });
-
-      tl.fromTo(
-        stageRef.current,
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }
+      gsap.fromTo(
+        streamRef.current,
+        { opacity: 0.82 },
+        { opacity: 1, duration: 0.35, ease: "power2.out" }
       );
     },
     [activeIndex, reducedMotion, totalMembers]
@@ -86,16 +146,15 @@ export function TeamSection() {
     goToMember((activeIndex - 1 + totalMembers) % totalMembers);
   }, [activeIndex, totalMembers, goToMember]);
 
-  // Gentle auto progression that stops on hover / inspection
   useEffect(() => {
     if (reducedMotion || isPaused) {
-      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
       return;
     }
 
     autoPlayRef.current = setTimeout(() => {
       nextMember();
-    }, 6000);
+    }, 5200);
 
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
@@ -107,50 +166,30 @@ export function TeamSection() {
     else if (e.key === "ArrowLeft") prevMember();
   };
 
-  const initials = currentMember.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("");
-
   return (
-    <Section
-      id="team"
-      index="05"
-      label="TEAM"
-      title="Chapter Stewards & Research Fellows"
-    >
-      {/* Narrative Header */}
-      <Reveal>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 border-b border-white/[0.12] pb-6">
-          <div>
-            <div className="font-mono text-xs uppercase tracking-[0.22em] text-white/50 mb-2 flex items-center gap-2">
-              <Diamond size={5} filled={true} />
-              <span>THE HUMAN STREAM // ACTIVE STEWARDS</span>
-            </div>
-            <p className="text-white/80 text-sm sm:text-base font-light max-w-xl">
-              Meet the student fellows guiding our research colloquia, open-source initiatives,
-              and academic inquiry. One fellow takes the stage at a time.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/40">
-              STEWARD {String(activeIndex + 1).padStart(2, "0")} / {String(totalMembers).padStart(2, "0")}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsPaused((prev) => !prev)}
-              aria-label={isPaused ? "Resume team stream" : "Pause team stream"}
-              className="px-3 py-1.5 border border-white/20 hover:border-white text-white font-mono text-[10px] uppercase tracking-widest transition-colors inline-flex items-center gap-2 focus-visible:outline-white cursor-pointer"
-            >
-              <Diamond size={4} filled={!isPaused} />
-              <span>{isPaused ? "PAUSED" : "STREAM ACTIVE"}</span>
-            </button>
-          </div>
+    <Section id="team" index="05" label="TEAM" title="Chapter Stewards">
+      <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/50 flex items-center gap-2">
+          <Diamond size={5} filled={true} />
+          <span>THE HUMAN STREAM // ACTIVE STEWARDS</span>
         </div>
-      </Reveal>
 
-      {/* Shared Human-Centered Visual Stage */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
+            {String(activeIndex + 1).padStart(2, "0")} / {String(totalMembers).padStart(2, "0")}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsPaused((prev) => !prev)}
+            aria-label={isPaused ? "Resume team stream" : "Pause team stream"}
+            className="px-2.5 py-1 border border-white/20 hover:border-white text-white font-mono text-[10px] uppercase tracking-widest transition-colors inline-flex items-center gap-2 focus-visible:outline-white cursor-pointer"
+          >
+            <Diamond size={4} filled={!isPaused} />
+            <span>{isPaused ? "PAUSED" : "LIVE"}</span>
+          </button>
+        </div>
+      </div>
+
       <div
         tabIndex={0}
         onKeyDown={handleKeyDown}
@@ -158,122 +197,124 @@ export function TeamSection() {
         onMouseLeave={() => setIsPaused(false)}
         onFocus={() => setIsPaused(true)}
         onBlur={() => setIsPaused(false)}
-        className="relative w-full border border-white/[0.14] bg-neutral-950/80 p-6 sm:p-10 lg:p-12 overflow-hidden focus:outline-none focus:ring-1 focus:ring-white/40"
-        aria-label="Human-centered team stream. Use arrow keys to step between members."
+        className="relative w-full overflow-hidden focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+        aria-label="Compact team stream. Use arrow keys to step between members."
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          {/* Left Column: Fellow Directory Stream Selector */}
-          <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-white/[0.10] pb-6 lg:pb-0 lg:pr-8">
-            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40 mb-4">
-              FELLOWSHIP ROSTER
-            </div>
-            <div className="space-y-1">
-              {TEAM_MEMBERS.map((member, idx) => {
-                const isActive = idx === activeIndex;
-                return (
-                  <button
-                    key={member.id || idx}
-                    type="button"
-                    onClick={() => goToMember(idx)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xs transition-all flex items-center justify-between font-mono text-xs cursor-pointer focus-visible:outline-white ${
-                      isActive
-                        ? "bg-white/[0.08] text-white border-l-2 border-white pl-3 font-medium"
-                        : "text-white/50 hover:text-white hover:bg-white/[0.03]"
+        <div
+          ref={streamRef}
+          aria-live="polite"
+          className="relative h-[280px] sm:h-[300px] lg:h-[320px] flex items-end justify-center"
+        >
+          {TEAM_MEMBERS.map((member, idx) => {
+            const offset = circularOffset(idx, activeIndex, totalMembers);
+            const distance = Math.abs(offset);
+            if (distance > neighborReach) return null;
+
+            const isFocus = offset === 0;
+            const scale = isFocus ? 1 : distance === 1 ? 0.78 : 0.62;
+            const opacity = isFocus ? 1 : distance === 1 ? 0.42 : 0.2;
+            const slot = isFocus ? 150 : neighborReach === 1 ? 108 : 118;
+            const githubUrl = findLink(member.links, "github");
+            const linkedinUrl = findLink(member.links, "linkedin");
+
+            return (
+              <div
+                key={member.id || idx}
+                className="absolute bottom-0 flex flex-col items-center"
+                style={{
+                  transform: `translateX(${offset * slot}px) scale(${scale})`,
+                  opacity,
+                  zIndex: 10 - distance,
+                  transition: reducedMotion
+                    ? "none"
+                    : "transform 550ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => goToMember(idx)}
+                  aria-current={isFocus ? "true" : undefined}
+                  aria-label={`${member.name}, ${member.role}`}
+                  className="cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-white"
+                >
+                  <div
+                    className={`relative mx-auto mb-3 overflow-hidden border bg-neutral-950/40 flex items-center justify-center ${
+                      isFocus
+                        ? "w-[132px] h-[160px] sm:w-[148px] sm:h-[176px] lg:w-[168px] lg:h-[200px] border-white/35"
+                        : "w-[80px] h-[104px] sm:w-[92px] sm:h-[118px] lg:w-[104px] lg:h-[132px] border-white/12"
                     }`}
                   >
-                    <span className="truncate">{member.name}</span>
-                    <span className="text-[10px] text-white/30 tracking-wider">
-                      0{idx + 1}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <MemberPortrait member={member} focused={isFocus} />
+                  </div>
 
-          {/* Right Column: Dominant Fellow Presentation Stage */}
-          <div
-            ref={stageRef}
-            aria-live="polite"
-            className="lg:col-span-8 flex flex-col justify-between space-y-6"
+                  {isFocus ? (
+                    <div className="w-[168px] sm:w-[196px] lg:w-[210px] mx-auto text-center space-y-1.5">
+                      <h3 className="text-base sm:text-lg lg:text-xl font-light tracking-tight text-white">
+                        {member.name}
+                      </h3>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/55 leading-snug">
+                        {member.role}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="w-[96px] sm:w-[110px] mx-auto text-center font-mono text-[10px] uppercase tracking-[0.12em] text-white/40 truncate">
+                      {member.name.split(" ")[0]}
+                    </p>
+                  )}
+                </button>
+
+                {isFocus && (githubUrl || linkedinUrl) && (
+                  <div className="mt-2.5 flex items-center justify-center gap-2">
+                    {githubUrl && (
+                      <a
+                        href={githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${member.name} on GitHub`}
+                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
+                      >
+                        <GitHubIcon className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {linkedinUrl && (
+                      <a
+                        href={linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${member.name} on LinkedIn`}
+                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
+                      >
+                        <LinkedInIcon className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={prevMember}
+            aria-label="Previous team steward"
+            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
           >
-            {/* Top Stage Bar: Monogram Badge & Fellow Index */}
-            <div className="flex items-center justify-between border-b border-white/[0.10] pb-4">
-              <div className="w-14 h-14 rounded-sm border border-white/30 bg-white/[0.05] flex items-center justify-center font-mono text-base font-medium tracking-wider text-white">
-                {initials}
-              </div>
-
-              <div className="font-mono text-xs uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
-                <Diamond size={5} filled={true} />
-                <span>STEWARDSHIP 2026–2027</span>
-              </div>
-            </div>
-
-            {/* Fellow Name, Role, and Stewardship Bio */}
-            <div className="space-y-3">
-              <h3
-                className="text-3xl sm:text-4xl lg:text-5xl font-light text-white tracking-tight leading-[1.1]"
-                style={{ fontWeight: 300 }}
-              >
-                {currentMember.name}
-              </h3>
-
-              <p className="font-mono text-xs sm:text-sm uppercase tracking-[0.16em] text-white/70">
-                {currentMember.role}
-              </p>
-
-              <p className="text-white/75 text-sm sm:text-base font-light leading-relaxed max-w-2xl pt-2">
-                {currentMember.bio}
-              </p>
-            </div>
-
-            {/* Clickable Social Icons (No raw text URLs) */}
-            <div className="pt-4 border-t border-white/[0.10] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${currentMember.name} on GitHub`}
-                  className="w-9 h-9 rounded-xs border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                >
-                  <GitHubIcon className="w-4 h-4" />
-                </a>
-
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${currentMember.name} on LinkedIn`}
-                  className="w-9 h-9 rounded-xs border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                >
-                  <LinkedInIcon className="w-4 h-4" />
-                </a>
-              </div>
-
-              {/* Stepper Controls */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={prevMember}
-                  aria-label="Previous team steward"
-                  className="w-9 h-9 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  onClick={nextMember}
-                  aria-label="Next team steward"
-                  className="w-9 h-9 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-          </div>
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={nextMember}
+            aria-label="Next team steward"
+            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
+          >
+            →
+          </button>
         </div>
       </div>
+
+      <AlumniSection />
     </Section>
   );
 }

@@ -8,7 +8,6 @@ import { EventsSection } from "@/components/sections/EventsSection";
 import { GallerySection } from "@/components/sections/GallerySection";
 import { ProjectsSection } from "@/components/sections/ProjectsSection";
 import { TeamSection } from "@/components/sections/TeamSection";
-import { AlumniSection } from "@/components/sections/AlumniSection";
 import { FooterSection } from "@/components/sections/FooterSection";
 
 export default function Home() {
@@ -30,7 +29,6 @@ export default function Home() {
           <GallerySection />
           <ProjectsSection />
           <TeamSection />
-          <AlumniSection />
         </main>
         <FooterSection />
       </div>
