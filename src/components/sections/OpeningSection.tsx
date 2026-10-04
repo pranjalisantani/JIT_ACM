@@ -118,7 +118,7 @@ export function OpeningSection() {
     <section
       id="hero"
       ref={containerRef}
-      aria-label="ACM FACE Chapter Introduction"
+      aria-label="JIT ACM Student Chapter Introduction"
       className="relative w-full min-h-[92vh] sm:min-h-screen flex flex-col justify-between pt-28 sm:pt-32 pb-12 sm:pb-16 px-6 sm:px-10 lg:px-16 text-white overflow-hidden will-change-transform"
     >
       <div className="w-full max-w-[1440px] mx-auto flex flex-col justify-between flex-1 relative">
@@ -129,7 +129,7 @@ export function OpeningSection() {
         >
           <div className="flex items-center gap-3">
             <Diamond size={6} filled={true} />
-            <span className="text-white/90">ACMJIT // CHAPTER 01</span>
+            <span className="text-white/90">JIT ACM // CHAPTER 01</span>
           </div>
         </div>
 
@@ -143,14 +143,14 @@ export function OpeningSection() {
             <span>LIVING COMPUTATIONAL ENVIRONMENT</span>
           </div>
 
-          {/* <h1> ACMJIT </h1> with authoritative editorial typography */}
+          {/* <h1> JIT ACM </h1> with authoritative editorial typography */}
           <h1
             ref={titleRef}
-            aria-label="ACMJIT"
+            aria-label="JIT ACM"
             className="text-6xl sm:text-8xl md:text-9xl lg:text-[140px] font-light tracking-tight text-white leading-[0.9] mb-8 select-none"
             style={{ fontWeight: 300 }}
           >
-            ACMJIT
+            JIT ACM
           </h1>
 
           {/* Authoritative Primary Statement */}

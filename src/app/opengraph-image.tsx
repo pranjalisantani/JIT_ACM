@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ACM FACE — A Living Computing Community";
+export const alt = "JIT ACM — A Living Computing Community";
 export const size = {
   width: 1200,
   height: 630,
@@ -39,7 +39,7 @@ export default async function Image() {
               color: "rgba(255,255,255,0.6)",
             }}
           >
-            ACM STUDENT CHAPTER
+            JIT ACM STUDENT CHAPTER
           </span>
         </div>
 
@@ -53,7 +53,7 @@ export default async function Image() {
               color: "#ffffff",
             }}
           >
-            ACM FACE
+            JIT ACM
           </h1>
           <p
             style={{

@@ -184,7 +184,7 @@ export function FooterSection() {
             ref={identityTextRef}
             className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white select-none leading-none"
           >
-            ACM FACE
+            JIT ACM
           </h2>
         </div>
 
@@ -221,7 +221,7 @@ export function FooterSection() {
               href={FOOTER_DATA.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="ACM FACE on GitHub"
+              aria-label="JIT ACM on GitHub"
               className="group inline-flex items-center gap-3 font-mono text-xs uppercase tracking-[0.16em] text-white/70 hover:text-white transition-colors focus-visible:outline-sky-400 py-1"
             >
               <span className="w-8 h-8 rounded-sm border border-white/20 group-hover:border-white/50 bg-white/[0.04] group-hover:bg-white/[0.10] flex items-center justify-center transition-colors">
@@ -238,7 +238,7 @@ export function FooterSection() {
           className="w-full max-w-[90%] border-t border-white/[0.10] ml-auto mb-10 sm:mb-12"
         />
 
-        {/* 4. BOTTOM UTILITY ROW: © ACM FACE + Return to Top */}
+        {/* 4. BOTTOM UTILITY ROW: © JIT ACM + Return to Top */}
         <div
           ref={utilityRef}
           className="will-change-transform flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-white/55"

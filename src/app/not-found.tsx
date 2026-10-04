@@ -12,7 +12,7 @@ export default function NotFound() {
           Page Not Located
         </h1>
         <p className="text-sm font-light text-neutral-400 leading-relaxed">
-          The requested path does not exist in the ACM FACE digital architecture.
+          The requested path does not exist in the JIT ACM digital architecture.
         </p>
         <div className="pt-4">
           <Link

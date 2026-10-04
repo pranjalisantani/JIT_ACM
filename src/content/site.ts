@@ -4,7 +4,7 @@
  */
 
 export const SITE_CONFIG = {
-  name: "ACM FACE",
+  name: "JIT ACM",
   tagline: "A LIVING COMPUTING COMMUNITY",
   shortDescription:
     "A living computing community grounded in computational rigor, research, and craft.",
@@ -72,10 +72,10 @@ export const FOOTER_FOCUS_NAV = [
 ] as const;
 
 export const FOOTER_DATA = {
-  wordmark: "ACM FACE",
+  wordmark: "JIT ACM",
   tagline: "ADVANCING COMPUTING. BUILDING PEOPLE.",
   institutionalNote: "ACM Student Chapter · Computing Society & Systems Research Forum",
-  copyright: "© 2026 ACM FACE. All rights reserved.",
+  copyright: "© 2026 JIT ACM. All rights reserved.",
   githubUrl: "https://github.com/acm-face",
 };
 

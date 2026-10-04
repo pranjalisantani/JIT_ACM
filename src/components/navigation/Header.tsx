@@ -191,10 +191,10 @@ export function Header() {
             <a
               href="#hero"
               className="flex items-center gap-2 text-white hover:text-white/80 transition-colors uppercase tracking-[0.16em] font-medium py-1"
-              aria-label="ACMJIT home"
+              aria-label="JIT ACM home"
             >
               <Diamond size={5} filled={true} />
-              <span className="font-semibold tracking-wider">ACMJIT</span>
+              <span className="font-semibold tracking-wider">JIT ACM</span>
             </a>
 
             {/* Desktop Nav Links (Quiet, elegant, uppercase tracking) */}
@@ -277,7 +277,7 @@ export function Header() {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`ACM FACE on ${item.label}`}
+                    aria-label={`JIT ACM on ${item.label}`}
                     className="p-1 rounded-full text-sky-300 border border-sky-400/40 bg-sky-400/10 shadow-[0_0_10px_rgba(56,189,248,0.35)] hover:border-sky-300 hover:shadow-[0_0_14px_rgba(56,189,248,0.55)] transition-all flex items-center justify-center focus-visible:outline-sky-400"
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -290,7 +290,7 @@ export function Header() {
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`ACM FACE on ${item.label}`}
+                  aria-label={`JIT ACM on ${item.label}`}
                   className="p-1 text-white/45 hover:text-white transition-colors flex items-center justify-center focus-visible:outline-white"
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -316,7 +316,7 @@ export function Header() {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/50">
-              ACMJIT · MENU
+              JIT ACM · MENU
             </span>
             <button
               type="button"
@@ -361,7 +361,7 @@ export function Header() {
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`ACM FACE on ${item.label}`}
+                  aria-label={`JIT ACM on ${item.label}`}
                   className={`p-1.5 rounded-full transition-all flex items-center justify-center ${
                     item.primary
                       ? "text-sky-300 border border-sky-400/40 bg-sky-400/10 shadow-[0_0_10px_rgba(56,189,248,0.35)]"

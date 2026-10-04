@@ -17,8 +17,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   title: {
-    default: "ACM FACE — A Living Computing Community",
-    template: "%s · ACM FACE",
+    default: "JIT ACM — A Living Computing Community",
+    template: "%s · JIT ACM",
   },
   description:
     "A living computing community grounded in computational rigor, research, and craft.",
@@ -27,25 +27,26 @@ export const metadata: Metadata = {
   },
   keywords: [
     "ACM",
-    "ACM FACE",
+    "JIT ACM",
+    "JIT ACM Student Chapter",
     "Computing Community",
     "Computer Science",
     "Systems Rigor",
     "Algorithms",
     "Open Source",
   ],
-  authors: [{ name: "ACM FACE" }],
+  authors: [{ name: "JIT ACM Student Chapter" }],
   openGraph: {
-    title: "ACM FACE — A Living Computing Community",
+    title: "JIT ACM — A Living Computing Community",
     description:
       "A living computing community grounded in computational rigor, research, and craft.",
-    siteName: "ACM FACE",
+    siteName: "JIT ACM",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ACM FACE — A Living Computing Community",
+    title: "JIT ACM — A Living Computing Community",
     description:
       "A living computing community grounded in computational rigor, research, and craft.",
   },
@@ -69,8 +70,8 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "ACM FACE",
-    alternateName: "A Living Computing Community",
+    name: "JIT ACM",
+    alternateName: "JIT ACM Student Chapter",
     url: siteUrl || "https://acm-face.org",
     description:
       "A living computing community grounded in computational rigor, research, and craft.",

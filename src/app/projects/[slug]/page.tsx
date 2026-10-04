@@ -22,12 +22,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!project) {
     return {
-      title: "Project Not Found · ACM FACE",
+      title: "Project Not Found · JIT ACM",
     };
   }
 
   return {
-    title: `${project.title} · ACM FACE Projects`,
+    title: `${project.title} · JIT ACM Projects`,
     description: project.summary,
   };
 }
