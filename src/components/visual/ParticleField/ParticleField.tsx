@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { registerScrollTrigger, gsap, type ScrollTrigger } from "@/lib/motion/gsap";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { PARTICLE_FIELD_CONFIG, SECTION_PRESETS } from "./config";
-import { ParticleSimulation } from "./particleSimulation";
+import { ParticleSimulation, type CursorForce } from "./particleSimulation";
 import { ParticleRenderer } from "./particleRenderer";
 import { ConnectionSystem } from "./connectionSystem";
 import { CameraController } from "./cameraController";
@@ -29,25 +29,6 @@ export function ParticleField() {
     let width = container.clientWidth || window.innerWidth;
     let height = container.clientHeight || window.innerHeight;
 
-    // Check WebGL context and precision support safely
-    const getVerifiedWebGLContext = (): WebGLRenderingContext | WebGL2RenderingContext | null => {
-      try {
-        if (typeof window === "undefined" || !window.WebGLRenderingContext) return null;
-        const gl = (canvas.getContext("webgl2") || canvas.getContext("webgl")) as
-          | WebGLRenderingContext
-          | WebGL2RenderingContext
-          | null;
-        if (!gl) return null;
-        const prec = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
-        if (!prec || prec.precision === 0) return null;
-        return gl;
-      } catch {
-        return null;
-      }
-    };
-
-    const verifiedGl = getVerifiedWebGLContext();
-
     // Common Simulation, Camera, and Connection graph
     const simulation = new ParticleSimulation(isMobile);
     const cameraController = new CameraController(width, height, isMobile);
@@ -62,41 +43,54 @@ export function ParticleField() {
     let ctx2d: CanvasRenderingContext2D | null = null;
     let sprite2d: HTMLCanvasElement | null = null;
 
-    if (verifiedGl) {
-      try {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(PARTICLE_FIELD_CONFIG.colors.background);
+    try {
+      scene = new THREE.Scene();
+      scene.background = null;
 
-        renderer = new THREE.WebGLRenderer({
-          canvas,
-          context: verifiedGl,
-          powerPreference: "high-performance",
-          antialias: false,
-          alpha: false,
-          depth: true,
-          stencil: false,
-        });
-        renderer.setSize(width, height, false);
-        renderer.setPixelRatio(dpr);
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        powerPreference: "high-performance",
+        antialias: false,
+        alpha: true,
+        depth: false,
+        stencil: false,
+        preserveDrawingBuffer: false,
+      });
+      renderer.setSize(width, height, false);
+      renderer.setPixelRatio(dpr);
 
-        particleRenderer = new ParticleRenderer(
-          simulation.particles,
-          simulation.ambientParticles
-        );
-        particleRenderer.setPixelRatio(dpr);
+      particleRenderer = new ParticleRenderer(
+        simulation.particles,
+        simulation.ambientParticles
+      );
+      particleRenderer.setPixelRatio(dpr);
 
-        worldGroup = new THREE.Group();
-        worldGroup.add(particleRenderer.mainPoints);
-        worldGroup.add(connectionSystem.linesMesh);
+      worldGroup = new THREE.Group();
+      worldGroup.add(particleRenderer.mainPoints);
+      worldGroup.add(particleRenderer.ambientPoints);
+      worldGroup.add(connectionSystem.linesMesh);
 
-        scene.add(particleRenderer.ambientPoints);
-        scene.add(worldGroup);
-      } catch {
-        renderer = null;
-        scene = null;
-        particleRenderer = null;
-        worldGroup = null;
+      worldGroup.position.set(0, 0, 0);
+      worldGroup.scale.set(1, 1, 1);
+      scene.add(worldGroup);
+
+      if (typeof window !== "undefined") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__acm_debug = {
+          scene,
+          renderer,
+          particleRenderer,
+          connectionSystem,
+          simulation,
+          camera: cameraController.camera,
+          worldGroup,
+        };
       }
+    } catch {
+      renderer = null;
+      scene = null;
+      particleRenderer = null;
+      worldGroup = null;
     }
 
     if (!renderer) {
@@ -122,28 +116,29 @@ export function ParticleField() {
       }
     }
 
-    // Initial Reveal State
-    const revealObj = { progress: 0 };
+    // Initial Reveal State — fully active immediately
+    const revealObj = { progress: 1.0 };
     const revealTween = gsap.to(revealObj, {
       progress: 1.0,
-      duration: 2.2,
+      duration: 0.1,
       ease: "power2.inOut",
-      delay: 0.2,
     });
 
     // GSAP ScrollTrigger Integration for Section Awareness
     const ScrollTrigger = registerScrollTrigger();
     const stInstances: ScrollTrigger[] = [];
+    let currentActiveSection: string = "hero";
 
     if (ScrollTrigger) {
       const sectionKeys: (keyof typeof SECTION_PRESETS)[] = [
         "hero",
+        "sponsors",
         "about",
         "events",
         "gallery",
         "projects",
         "team",
-        "alumni",
+        "closing",
         "footer",
       ];
 
@@ -151,57 +146,81 @@ export function ParticleField() {
         const el = document.getElementById(key);
         if (!el) return;
 
-        const preset = SECTION_PRESETS[key];
+        const preset = (SECTION_PRESETS as Record<string, typeof SECTION_PRESETS.hero>)[key] || SECTION_PRESETS.footer;
+        const updateSection = () => {
+          currentActiveSection = key;
+          simulation.currentSection = currentActiveSection;
+          gsap.to(cameraController.scrollState, {
+            ...preset,
+            duration: 0.85,
+            ease: "power2.out",
+            overwrite: "auto",
+          });
+        };
+
+        const isBottomSection = key === "footer" || key === "closing";
         const st = ScrollTrigger.create({
           trigger: el,
-          start: "top center",
-          end: "bottom center",
-          onEnter: () => {
-            gsap.to(cameraController.scrollState, {
-              ...preset,
-              duration: 0.85,
-              ease: "power2.out",
-              overwrite: "auto",
-            });
-          },
-          onEnterBack: () => {
-            gsap.to(cameraController.scrollState, {
-              ...preset,
-              duration: 0.85,
-              ease: "power2.out",
-              overwrite: "auto",
-            });
-          },
+          start: isBottomSection ? "top 90%" : "top center",
+          end: isBottomSection ? "max" : "bottom center",
+          onEnter: updateSection,
+          onEnterBack: updateSection,
+          onLeave: isBottomSection ? updateSection : undefined,
           onToggle: (self) => {
-            if (self.isActive) {
-              gsap.to(cameraController.scrollState, {
-                ...preset,
-                duration: 0.85,
-                ease: "power2.out",
-                overwrite: "auto",
-              });
-            }
+            if (self.isActive) updateSection();
           },
         });
         stInstances.push(st);
       });
     }
 
-    // Mouse Interaction (Desktop only)
+    // Interactive 3D Cursor Force Field Tracking
+    let isCursorActive = false;
+    let hasFirstCursorMove = false;
+    let rawMouseX = 0;
+    let rawMouseY = 0;
+    const prevLocalCursor = new THREE.Vector3();
+    let cursorVelocityX = 0;
+    let cursorVelocityY = 0;
+    const raycaster = new THREE.Raycaster();
+    const worldPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const planeHitPoint = new THREE.Vector3();
+
     const handleMouseMove = (e: MouseEvent) => {
-      const normX = (e.clientX / window.innerWidth) * 2 - 1;
+      isCursorActive = true;
+      rawMouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      rawMouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+      const normX = rawMouseX;
       const normY = (e.clientY / window.innerHeight) * 2 - 1;
       cameraController.onMouseMove(normX, normY);
     };
 
     const handleMouseLeave = () => {
+      isCursorActive = false;
+      hasFirstCursorMove = false;
       cameraController.onMouseLeave();
     };
 
-    if (!isMobile) {
-      window.addEventListener("mousemove", handleMouseMove, { passive: true });
-      document.addEventListener("mouseleave", handleMouseLeave);
-    }
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        isCursorActive = true;
+        const touch = e.touches[0];
+        rawMouseX = (touch.clientX / window.innerWidth) * 2 - 1;
+        rawMouseY = -(touch.clientY / window.innerHeight) * 2 + 1;
+        cameraController.onMouseMove(rawMouseX, (touch.clientY / window.innerHeight) * 2 - 1);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      isCursorActive = false;
+      hasFirstCursorMove = false;
+      cameraController.onMouseLeave();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     // Responsive Resize Handling
     const handleResize = () => {
@@ -252,13 +271,9 @@ export function ParticleField() {
     let currentRotYOffset = 0;
     let currentRotXOffset = 0;
     let currentConvergence = 0.0;
-    let initialRenderFrames = 0;
 
     const renderFrame = () => {
       animationFrameId = requestAnimationFrame(renderFrame);
-
-      if (!isPageVisible && initialRenderFrames >= 15) return;
-      initialRenderFrames++;
 
       const now = performance.now();
       const deltaSec = Math.min(0.08, (now - lastTime) / 1000);
@@ -282,8 +297,55 @@ export function ParticleField() {
             Math.sin(t * PARTICLE_FIELD_CONFIG.breathing.speed) +
           0.012 * Math.cos(t * PARTICLE_FIELD_CONFIG.breathing.speed * 0.5);
 
-      // 2. Update Simulation Positions, Convergence & Depth
-      simulation.update(t, breathScale, reducedMotion, revealObj.progress, currentConvergence);
+      // 2. Unproject cursor to 3D local space for physics interaction
+      let cursorForce: CursorForce | null = null;
+      if (isCursorActive && !reducedMotion) {
+        raycaster.setFromCamera(new THREE.Vector2(rawMouseX, rawMouseY), cameraController.camera);
+        if (raycaster.ray.intersectPlane(worldPlane, planeHitPoint)) {
+          const localHit = planeHitPoint.clone();
+          if (worldGroup) {
+            worldGroup.updateMatrixWorld(true);
+            worldGroup.worldToLocal(localHit);
+          }
+
+          if (!hasFirstCursorMove) {
+            hasFirstCursorMove = true;
+            prevLocalCursor.copy(localHit);
+            cursorVelocityX = 0;
+            cursorVelocityY = 0;
+          } else {
+            const rawVx = (localHit.x - prevLocalCursor.x) * 0.45;
+            const rawVy = (localHit.y - prevLocalCursor.y) * 0.45;
+            cursorVelocityX += (rawVx - cursorVelocityX) * 0.35;
+            cursorVelocityY += (rawVy - cursorVelocityY) * 0.35;
+            prevLocalCursor.copy(localHit);
+          }
+
+          cursorForce = {
+            active: true,
+            x: localHit.x,
+            y: localHit.y,
+            z: localHit.z,
+            vx: cursorVelocityX,
+            vy: cursorVelocityY,
+          };
+        }
+      } else {
+        hasFirstCursorMove = false;
+        cursorVelocityX *= 0.88;
+        cursorVelocityY *= 0.88;
+      }
+
+      // Update Simulation Positions, Physics Forces, Convergence & Depth
+      simulation.update(
+        t,
+        breathScale,
+        reducedMotion,
+        revealObj.progress,
+        currentConvergence,
+        cursorForce,
+        currentActiveSection
+      );
 
       // 3. Update Camera and Interpolated Controls
       cameraController.update(t, reducedMotion);
@@ -328,7 +390,11 @@ export function ParticleField() {
           simulation.activeRegion
         );
 
-        particleRenderer.update(simulation.particles, simulation.ambientParticles);
+        particleRenderer.update(
+          simulation.particles,
+          simulation.ambientParticles,
+          currentActiveSection
+        );
         renderer.render(scene, cameraController.camera);
       } else if (ctx2d && sprite2d) {
         // --- Canvas 2D 3D-Perspective Render Path ---
@@ -440,7 +506,7 @@ export function ParticleField() {
           ctx2d.beginPath();
           ctx2d.moveTo(sx1, sy1);
           ctx2d.lineTo(sx2, sy2);
-          ctx2d.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.25, intensity)})`;
+          ctx2d.strokeStyle = `rgba(195, 222, 255, ${Math.min(0.35, intensity)})`;
           ctx2d.stroke();
         }
 
@@ -501,7 +567,6 @@ export function ParticleField() {
       particleRenderer?.dispose();
       connectionSystem.dispose();
       renderer?.dispose();
-      renderer?.forceContextLoss();
       scene?.clear();
     };
   }, [reducedMotion]);
@@ -516,9 +581,40 @@ export function ParticleField() {
         height: "100vh",
       }}
     >
+      {/* Soft atmospheric white/cotton-like haze layer providing gentle spatial depth */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      >
+        {/* Primary central-upper soft cotton haze */}
+        <div
+          className="absolute top-[-8%] left-[12%] w-[76vw] h-[70vh] rounded-full blur-[130px] opacity-20 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(255, 255, 255, 0.16) 0%, rgba(200, 225, 255, 0.06) 45%, transparent 75%)",
+          }}
+        />
+        {/* Secondary flanking subtle atmospheric depth */}
+        <div
+          className="absolute top-[22%] right-[-6%] w-[55vw] h-[55vh] rounded-full blur-[150px] opacity-15 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at center, rgba(185, 215, 255, 0.10) 0%, transparent 70%)",
+          }}
+        />
+        {/* Lower grounding subtle haze */}
+        <div
+          className="absolute bottom-[-12%] left-[22%] w-[60vw] h-[50vh] rounded-full blur-[140px] opacity-15 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 70%)",
+          }}
+        />
+      </div>
+
       <canvas
         ref={canvasRef}
-        className="w-full h-full block pointer-events-none"
+        className="relative z-10 w-full h-full block pointer-events-none"
       />
     </div>
   );

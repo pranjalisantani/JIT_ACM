@@ -35,6 +35,7 @@ export class ConnectionSystem {
     this.maxPerParticle = config.maxConnectionsPerParticle;
     const threshold = config.connectionDistanceThreshold;
     this.distThresholdSq = threshold * threshold;
+    this.topologyUpdateInterval = isMobile ? 4 : 2; // Rapid 60fps graph updates
 
     // LineSegments requires 2 vertices per edge, 3 floats per vertex (X, Y, Z)
     this.positions = new Float32Array(this.maxConnections * 2 * 3);
@@ -89,7 +90,12 @@ export class ConnectionSystem {
         const dz = p1.currZ - p2.currZ;
         const distSq = dx * dx + dy * dy + dz * dz;
 
-        if (distSq < this.distThresholdSq) {
+        const effectiveThresholdSq =
+          this.distThresholdSq *
+          p1.connectionRangeMultiplier *
+          p2.connectionRangeMultiplier;
+
+        if (distSq < effectiveThresholdSq) {
           // Weight based on depth bands (near/mid have stronger connection presence)
           const weight = (p1.currentAlpha + p2.currentAlpha) * 0.5;
 
@@ -123,11 +129,8 @@ export class ConnectionSystem {
     revealProgress: number = 1.0,
     activeRegion: string | null = null
   ): void {
-    // Reveal connections between reveal progress 0.4 and 0.95
-    const connectionReveal = Math.min(
-      1.0,
-      Math.max(0.0, (revealProgress - 0.4) / 0.55)
-    );
+    // Immediate line reveal tracking
+    const connectionReveal = Math.min(1.0, Math.max(0.0, revealProgress));
 
     if (connectionReveal <= 0.001) {
       this.geometry.setDrawRange(0, 0);
@@ -143,6 +146,7 @@ export class ConnectionSystem {
     let posPtr = 0;
     let colPtr = 0;
     const thresholdSq = this.distThresholdSq;
+    const maxStretchSq = thresholdSq * 1.25; // Elastic stretch hysteresis
 
     for (let e = 0; e < edgeCount; e++) {
       const edge = this.activeEdges[e];
@@ -154,31 +158,33 @@ export class ConnectionSystem {
       const dz = p1.currZ - p2.currZ;
       const currentDistSq = dx * dx + dy * dy + dz * dz;
 
-      // Smooth falloff based on 3D distance
-      if (currentDistSq >= thresholdSq) continue;
-      const distNorm = Math.sqrt(currentDistSq) / Math.sqrt(thresholdSq); // 0 to 1
-      const distFade = Math.max(0, 1 - distNorm); // 1 at 0 distance, 0 at threshold
+      // Elastic stretch: allow existing connections to stretch up to 125% of threshold before breaking
+      if (currentDistSq >= maxStretchSq) continue;
+      const distNorm = Math.sqrt(currentDistSq) / Math.sqrt(maxStretchSq); // 0 to 1
+      const distFade = Math.max(0, 1.0 - distNorm); // 1 at 0 distance, 0 at max stretch
 
-      // Grayscale intensity based on depth band weights and global multiplier
+      // Intensity based on depth band weights and global multiplier
       const nodeFade = (p1.currentAlpha + p2.currentAlpha) * 0.5;
       let regionBoost = 1.0;
       if (activeRegion) {
         if (p1.region === activeRegion && p2.region === activeRegion) {
-          regionBoost = 1.85;
+          regionBoost = 1.45;
         } else if (p1.region !== activeRegion && p2.region !== activeRegion && p1.region !== "ambient") {
-          regionBoost = 0.55;
+          regionBoost = 0.75;
         }
       }
 
-      const intensity =
-        distFade *
-        nodeFade *
-        PARTICLE_FIELD_CONFIG.colors.connectionBaseAlpha *
-        globalAlphaMultiplier *
-        connectionReveal *
-        regionBoost;
+      // Delicate, subtle connecting lines that stay subordinate to particle dots
+      const baseEdgeIntensity = (0.20 + 0.80 * distFade) * nodeFade * 0.45;
+      const intensity = Math.min(
+        0.24,
+        Math.max(
+          0.0,
+          baseEdgeIntensity * globalAlphaMultiplier * connectionReveal * regionBoost
+        )
+      );
 
-      if (intensity < 0.005) continue;
+      if (intensity < 0.02) continue;
 
       // Vertex 1 position
       this.positions[posPtr++] = p1.currX;
@@ -190,15 +196,20 @@ export class ConnectionSystem {
       this.positions[posPtr++] = p2.currY;
       this.positions[posPtr++] = p2.currZ;
 
-      // Vertex 1 Grayscale RGB
-      this.colors[colPtr++] = intensity;
-      this.colors[colPtr++] = intensity;
-      this.colors[colPtr++] = intensity;
+      // Restrained Cool-Blue & White Line Treatment
+      const r = intensity * 0.84;
+      const g = intensity * 0.92;
+      const b = intensity * 1.0;
 
-      // Vertex 2 Grayscale RGB
-      this.colors[colPtr++] = intensity;
-      this.colors[colPtr++] = intensity;
-      this.colors[colPtr++] = intensity;
+      // Vertex 1 Cool-Blue RGB
+      this.colors[colPtr++] = r;
+      this.colors[colPtr++] = g;
+      this.colors[colPtr++] = b;
+
+      // Vertex 2 Cool-Blue RGB
+      this.colors[colPtr++] = r;
+      this.colors[colPtr++] = g;
+      this.colors[colPtr++] = b;
     }
 
     const vertexCount = posPtr / 3;

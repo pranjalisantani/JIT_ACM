@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" fill="none">
+  <polygon points="16,8 30,24 16,40 2,24" stroke="#ffffff" stroke-width="1.8" fill="none" opacity="0.75"/>
+  <path d="M11 24h10M16 19v10" stroke="#ffffff" stroke-width="1.4" opacity="0.85"/>
+  <text x="38" y="21" fill="#ffffff" font-family="'Geist', 'Inter', -apple-system, sans-serif" font-weight="700" font-size="13" letter-spacing="0.16em">ACM DL</text>
+  <text x="38" y="34" fill="#ffffff" font-family="'Geist', 'Inter', -apple-system, sans-serif" font-weight="400" font-size="8.5" letter-spacing="0.2em" opacity="0.6">DIGITAL LIBRARY</text>
+</svg>

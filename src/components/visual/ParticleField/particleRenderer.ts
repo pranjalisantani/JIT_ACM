@@ -1,6 +1,6 @@
 /**
  * ACM FACE — Particle Renderer
- * Custom ShaderMaterial for luminous grayscale points with sharp core + soft halo sprite and per-particle depth sizing.
+ * Custom ShaderMaterial for luminous points with sharp core + soft halo sprite and per-particle depth sizing.
  */
 
 import * as THREE from "three";
@@ -53,7 +53,7 @@ export class ParticleRenderer {
       new THREE.BufferAttribute(this.mainAlphas, 1).setUsage(THREE.DynamicDrawUsage)
     );
 
-    // Custom Shader for Exact Depth Attenuation & Luminous Grayscale Halos
+    // Custom Shader for Exact Depth Attenuation & Luminous Halos
     this.mainMaterial = new THREE.ShaderMaterial({
       uniforms: {
         pointTexture: { value: this.spriteTexture },
@@ -75,8 +75,8 @@ export class ParticleRenderer {
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mvPosition;
 
-          // Realistic Perspective Size Attenuation with DPR scaling
-          gl_PointSize = aSize * uPixelRatio * (32.0 / -mvPosition.z);
+          // Clear, visible particle dots with realistic perspective attenuation
+          gl_PointSize = aSize * uPixelRatio * (60.0 / -mvPosition.z);
         }
       `,
       fragmentShader: `
@@ -88,7 +88,7 @@ export class ParticleRenderer {
           vec4 texColor = texture2D(pointTexture, gl_PointCoord);
           if (texColor.a < 0.01) discard;
 
-          // Grayscale Luminous Core + Halo falloff
+          // Luminous Core + Halo falloff
           gl_FragColor = vec4(vColor * texColor.rgb, texColor.a * vAlpha);
         }
       `,
@@ -127,7 +127,7 @@ export class ParticleRenderer {
     );
 
     this.ambientMaterial = new THREE.PointsMaterial({
-      size: 2.2,
+      size: 1.8,
       map: this.spriteTexture,
       vertexColors: true,
       transparent: true,
@@ -141,7 +141,7 @@ export class ParticleRenderer {
   }
 
   /**
-   * Generates a 64x64 radial gradient texture with intense white core and soft silver/gray luminous halo.
+   * Generates a 64x64 radial gradient texture with intense crisp white core and soft luminous halo.
    */
   private createParticleSprite(): THREE.CanvasTexture {
     const canvas = document.createElement("canvas");
@@ -154,12 +154,12 @@ export class ParticleRenderer {
       const radius = 30;
       const grad = ctx.createRadialGradient(center, center, 0, center, center, radius);
 
-      // Strict Grayscale luminous falloff
-      grad.addColorStop(0.0, "rgba(255, 255, 255, 1.0)");    // Sharp Core
-      grad.addColorStop(0.18, "rgba(240, 240, 245, 0.92)");  // Inner glow
-      grad.addColorStop(0.42, "rgba(200, 205, 215, 0.38)");  // Halo
-      grad.addColorStop(0.72, "rgba(140, 145, 155, 0.12)");  // Outer dispersion
-      grad.addColorStop(1.0, "rgba(0, 0, 0, 0.0)");          // Edge boundary
+      // Solid Crisp White Core + Soft Dispersion Aura
+      grad.addColorStop(0.0, "rgba(255, 255, 255, 1.0)");
+      grad.addColorStop(0.24, "rgba(255, 255, 255, 0.92)");
+      grad.addColorStop(0.48, "rgba(220, 238, 255, 0.48)");
+      grad.addColorStop(0.75, "rgba(160, 200, 255, 0.16)");
+      grad.addColorStop(1.0, "rgba(0, 0, 0, 0.0)");
 
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 64, 64);
@@ -181,7 +181,11 @@ export class ParticleRenderer {
   /**
    * Per-frame attribute refresh for main particles and ambient particles
    */
-  public update(particles: Particle[], ambientParticles: AmbientParticle[]): void {
+  public update(
+    particles: Particle[],
+    ambientParticles: AmbientParticle[],
+    sectionState: string = "hero"
+  ): void {
     const pCount = particles.length;
 
     for (let i = 0; i < pCount; i++) {
@@ -193,22 +197,22 @@ export class ParticleRenderer {
       this.mainPositions[i3 + 1] = p.currY;
       this.mainPositions[i3 + 2] = p.currZ;
 
-      // Grayscale Color Tone according to depth band
+      // White and Restrained Cool-Blue Tones according to depth band
       if (p.depthBand === "near") {
-        // Pure White Core
+        // Pure Luminous White Core
         this.mainColors[i3] = 1.0;
         this.mainColors[i3 + 1] = 1.0;
         this.mainColors[i3 + 2] = 1.0;
       } else if (p.depthBand === "mid") {
-        // Silver / Light Gray
-        this.mainColors[i3] = 0.88;
-        this.mainColors[i3 + 1] = 0.90;
-        this.mainColors[i3 + 2] = 0.92;
+        // Silver / Cool Ice Tint
+        this.mainColors[i3] = 0.92;
+        this.mainColors[i3 + 1] = 0.96;
+        this.mainColors[i3 + 2] = 1.0;
       } else {
-        // Dimmer Gray
-        this.mainColors[i3] = 0.65;
-        this.mainColors[i3 + 1] = 0.68;
-        this.mainColors[i3 + 2] = 0.72;
+        // Deep Cool Slate
+        this.mainColors[i3] = 0.72;
+        this.mainColors[i3 + 1] = 0.82;
+        this.mainColors[i3 + 2] = 0.95;
       }
 
       this.mainSizes[i] = p.currentSize;
@@ -220,8 +224,17 @@ export class ParticleRenderer {
     (this.mainGeometry.attributes.aSize as THREE.BufferAttribute).needsUpdate = true;
     (this.mainGeometry.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true;
 
-    // Ambient stars
+    // Ambient stars with contextual section suppression
     const ambCount = ambientParticles.length;
+    const sectionAmbientMult =
+      sectionState === "closing"
+        ? 0.35
+        : sectionState === "footer"
+        ? 0.25
+        : sectionState === "projects" || sectionState === "team"
+        ? 0.55
+        : 1.0;
+
     for (let j = 0; j < ambCount; j++) {
       const a = ambientParticles[j];
       const j3 = j * 3;
@@ -229,7 +242,7 @@ export class ParticleRenderer {
       this.ambientPositions[j3 + 1] = a.y;
       this.ambientPositions[j3 + 2] = a.z;
 
-      const alpha = a.alpha * a.revealAlpha;
+      const alpha = a.alpha * a.revealAlpha * sectionAmbientMult;
       this.ambientColors[j3] = alpha;
       this.ambientColors[j3 + 1] = alpha;
       this.ambientColors[j3 + 2] = alpha;

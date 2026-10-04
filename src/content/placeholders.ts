@@ -6,8 +6,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { label: "Events", href: "#events" },
   { label: "Gallery", href: "#gallery" },
   { label: "Projects", href: "#projects" },
-  { label: "Team", href: "#team" },
-  { label: "Alumni", href: "#alumni" },
+  { label: "People", href: "#team" },
 ];
 
 export const SECTIONS_META: Record<string, SectionMeta> = {
@@ -44,18 +43,12 @@ export const SECTIONS_META: Record<string, SectionMeta> = {
   team: {
     id: "team",
     index: "05",
-    title: "Team",
+    title: "People",
     tagline: "People & Computational Community",
-  },
-  alumni: {
-    id: "alumni",
-    index: "06",
-    title: "Alumni",
-    tagline: "Before Us · Archival Stewardship",
   },
   footer: {
     id: "footer",
-    index: "07",
+    index: "06",
     title: "Footer",
     tagline: "Colophon & Affiliations",
   },

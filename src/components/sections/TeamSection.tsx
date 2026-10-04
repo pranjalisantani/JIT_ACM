@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Section } from "@/components/ui/Section";
-import { Diamond } from "@/components/ui/Diamond";
-import { AlumniSection } from "@/components/sections/AlumniSection";
 import { TEAM_MEMBERS } from "@/content/team";
-import { MemberItem, MemberLink } from "@/types";
+import { ALUMNI_MEMBERS } from "@/content/alumni";
+import { MemberItem, AlumniItem, MemberLink } from "@/types";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
-import { gsap } from "@/lib/motion/gsap";
 
 function GitHubIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -40,281 +37,397 @@ function LinkedInIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function circularOffset(index: number, active: number, total: number): number {
-  let delta = index - active;
-  const half = Math.floor(total / 2);
-  if (delta > half) delta -= total;
-  if (delta < -half) delta += total;
-  return delta;
-}
-
-function memberInitials(name: string): string {
+function getInitials(name: string): string {
   return name
     .split(" ")
     .filter(Boolean)
     .map((n) => n[0])
     .join("")
-    .slice(0, 2);
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function findLink(links: MemberLink[] | undefined, kind: "github" | "linkedin"): string | undefined {
   return links?.find((link) => link.label.toLowerCase().includes(kind))?.url;
 }
 
-function useNeighborReach() {
-  const [reach, setReach] = useState(2);
-
-  useEffect(() => {
-    const update = () => {
-      const width = window.innerWidth;
-      if (width < 640) setReach(1);
-      else if (width < 1024) setReach(1);
-      else setReach(2);
-    };
-
-    update();
-    window.addEventListener("resize", update, { passive: true });
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  return reach;
-}
-
-function MemberPortrait({
+/**
+ * Single Member Profile Block (Equal visual weight, compact, no cards/HUD)
+ */
+function MemberCard({
   member,
-  focused,
+  isClone = false,
+  onLinkClick,
 }: {
   member: MemberItem;
-  focused: boolean;
+  isClone?: boolean;
+  onLinkClick?: (e: React.MouseEvent) => void;
 }) {
-  const initials = memberInitials(member.name);
-
-  if (member.photo) {
-    return (
-      <Image
-        src={member.photo}
-        alt=""
-        fill
-        className={`object-cover ${focused ? "grayscale-0" : "grayscale"}`}
-        sizes={focused ? "220px" : "140px"}
-      />
-    );
-  }
+  const initials = getInitials(member.name);
+  const githubUrl = findLink(member.links, "github");
+  const linkedinUrl = findLink(member.links, "linkedin");
 
   return (
-    <span
-      className={`font-mono tracking-[0.18em] ${
-        focused ? "text-lg text-white/80" : "text-xs text-white/40"
-      }`}
+    <div
+      className="flex flex-col w-[130px] sm:w-[150px] md:w-[170px] shrink-0 select-none group"
+      aria-hidden={isClone ? "true" : undefined}
     >
-      {initials}
-    </span>
+      {/* Compact Portrait Frame with solid dark backdrop preventing particle bleed-through */}
+      <div className="relative w-full aspect-square overflow-hidden bg-[#0d0f14] border border-white/[0.08] group-hover:border-white/20 transition-colors duration-300 mb-2 sm:mb-2.5 flex items-center justify-center">
+        {member.photo && !member.placeholder ? (
+          <Image
+            src={member.photo}
+            alt={isClone ? "" : member.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 130px, (max-width: 768px) 150px, 170px"
+          />
+        ) : (
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/[0.12] bg-white/[0.04] flex items-center justify-center font-mono text-xs sm:text-sm font-light tracking-[0.14em] text-white/90">
+            {initials}
+          </div>
+        )}
+      </div>
+
+      {/* Name */}
+      <h3 className="text-xs sm:text-sm font-medium tracking-tight text-white leading-snug truncate">
+        {member.name}
+      </h3>
+
+      {/* Designation / Role */}
+      <p className="font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.10em] text-white/55 mt-0.5 leading-tight truncate">
+        {member.role}
+      </p>
+
+      {/* Social Links */}
+      {(linkedinUrl || githubUrl) && (
+        <div className="flex items-center gap-2.5 mt-1.5 text-white/40">
+          {linkedinUrl && (
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={isClone ? -1 : 0}
+              onClick={onLinkClick}
+              aria-label={`${member.name} on LinkedIn`}
+              className="hover:text-white transition-colors py-0.5 focus-visible:outline-sky-400"
+            >
+              <LinkedInIcon className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={isClone ? -1 : 0}
+              onClick={onLinkClick}
+              aria-label={`${member.name} on GitHub`}
+              className="hover:text-white transition-colors py-0.5 focus-visible:outline-sky-400"
+            >
+              <GitHubIcon className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
-export function TeamSection() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const streamRef = useRef<HTMLDivElement | null>(null);
-  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reducedMotion = usePrefersReducedMotion();
-  const neighborReach = useNeighborReach();
+/**
+ * Two-Lane Continuous Horizontal Stream with Pointer Drag and Touch Swipe
+ */
+function TeamLane({
+  members,
+  direction,
+  reducedMotion,
+  laneAriaLabel,
+}: {
+  members: MemberItem[];
+  direction: "left" | "right";
+  reducedMotion: boolean;
+  laneAriaLabel: string;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const cycleRef = useRef<HTMLDivElement | null>(null);
 
-  const totalMembers = TEAM_MEMBERS.length;
+  // Position & physics state
+  const posX = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
+  const startX = useRef<number>(0);
+  const startY = useRef<number>(0);
+  const startOffset = useRef<number>(0);
+  const hasMoved = useRef<boolean>(false);
+  const isHorizontalDrag = useRef<boolean>(false);
+  const isVerticalScroll = useRef<boolean>(false);
+  const lastX = useRef<number>(0);
+  const lastTime = useRef<number>(0);
+  const momentumVel = useRef<number>(0);
+  const cycleWidth = useRef<number>(0);
 
-  const goToMember = useCallback(
-    (targetIndex: number) => {
-      if (targetIndex === activeIndex || targetIndex < 0 || targetIndex >= totalMembers) return;
-      setActiveIndex(targetIndex);
+  // Base speed: +0.45 px/frame for rightward, -0.45 px/frame for leftward
+  const baseSpeed = direction === "right" ? 0.45 : -0.45;
 
-      if (reducedMotion || !streamRef.current) return;
+  // Ensure minimum cycle width by repeating members if count is small
+  const repeatCount = Math.max(2, Math.ceil(8 / Math.max(1, members.length)));
+  const cycleMembers = Array.from({ length: repeatCount }, () => members).flat();
 
-      gsap.fromTo(
-        streamRef.current,
-        { opacity: 0.82 },
-        { opacity: 1, duration: 0.35, ease: "power2.out" }
-      );
-    },
-    [activeIndex, reducedMotion, totalMembers]
-  );
-
-  const nextMember = useCallback(() => {
-    goToMember((activeIndex + 1) % totalMembers);
-  }, [activeIndex, totalMembers, goToMember]);
-
-  const prevMember = useCallback(() => {
-    goToMember((activeIndex - 1 + totalMembers) % totalMembers);
-  }, [activeIndex, totalMembers, goToMember]);
+  // Measure cycle width on mount and resize
+  const measure = useCallback(() => {
+    if (cycleRef.current) {
+      cycleWidth.current = cycleRef.current.scrollWidth;
+    }
+  }, []);
 
   useEffect(() => {
-    if (reducedMotion || isPaused) {
-      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      return;
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
+  // Animation frame loop for continuous drift & drag momentum
+  useEffect(() => {
+    let animId: number;
+
+    const tick = () => {
+      const W = cycleWidth.current;
+
+      if (!isDragging.current) {
+        if (Math.abs(momentumVel.current) > 0.05) {
+          posX.current += momentumVel.current;
+          momentumVel.current *= 0.94; // exponential friction decay
+        } else {
+          momentumVel.current = 0;
+          if (!reducedMotion) {
+            posX.current += baseSpeed;
+          }
+        }
+
+        // Invisible wrap within [-W, 0]
+        if (W > 0) {
+          while (posX.current < -W) posX.current += W;
+          while (posX.current > 0) posX.current -= W;
+        }
+
+        if (trackRef.current) {
+          trackRef.current.style.transform = `translate3d(${posX.current}px, 0, 0)`;
+        }
+      }
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [baseSpeed, reducedMotion]);
+
+  // Pointer Down (Mouse drag or touch start)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    startOffset.current = posX.current;
+    lastX.current = e.clientX;
+    lastTime.current = performance.now();
+    momentumVel.current = 0;
+    hasMoved.current = false;
+    isHorizontalDrag.current = false;
+    isVerticalScroll.current = false;
+
+    // Capture pointer on desktop
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore if not supported
+    }
+  };
+
+  // Pointer Move (Drag tracking with vertical scroll detection)
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current || isVerticalScroll.current) return;
+
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+
+    // Direction locking: If vertical delta dominates, yield to normal page scroll
+    if (!isHorizontalDrag.current && !isVerticalScroll.current) {
+      if (Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx)) {
+        isVerticalScroll.current = true;
+        isDragging.current = false;
+        return;
+      }
+      if (Math.abs(dx) > 5) {
+        isHorizontalDrag.current = true;
+      }
     }
 
-    autoPlayRef.current = setTimeout(() => {
-      nextMember();
-    }, 5200);
+    if (isHorizontalDrag.current) {
+      hasMoved.current = true;
+      const now = performance.now();
+      const dt = now - lastTime.current;
+      if (dt > 0) {
+        // Compute speed in px/frame (~16.6ms)
+        const instantSpeed = ((e.clientX - lastX.current) / dt) * 16.6;
+        momentumVel.current = Math.min(Math.max(instantSpeed, -18), 18);
+      }
+      lastX.current = e.clientX;
+      lastTime.current = now;
 
-    return () => {
-      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-    };
-  }, [activeIndex, isPaused, nextMember, reducedMotion]);
+      posX.current = startOffset.current + dx;
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowRight") nextMember();
-    else if (e.key === "ArrowLeft") prevMember();
+      // Wrap immediately during drag
+      const W = cycleWidth.current;
+      if (W > 0) {
+        while (posX.current < -W) posX.current += W;
+        while (posX.current > 0) posX.current -= W;
+      }
+
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(${posX.current}px, 0, 0)`;
+      }
+    }
+  };
+
+  // Pointer Up / Cancel
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+
+    // Reset moved flag after a short delay so link clicks during drag are cancelled
+    setTimeout(() => {
+      hasMoved.current = false;
+    }, 80);
+  };
+
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (hasMoved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   return (
-    <Section id="team" index="05" label="TEAM" title="Chapter Stewards">
-      <div className="flex items-center justify-between gap-4 mb-8">
-        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/50 flex items-center gap-2">
-          <Diamond size={5} filled={true} />
-          <span>THE HUMAN STREAM // ACTIVE STEWARDS</span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
-            {String(activeIndex + 1).padStart(2, "0")} / {String(totalMembers).padStart(2, "0")}
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsPaused((prev) => !prev)}
-            aria-label={isPaused ? "Resume team stream" : "Pause team stream"}
-            className="px-2.5 py-1 border border-white/20 hover:border-white text-white font-mono text-[10px] uppercase tracking-widest transition-colors inline-flex items-center gap-2 focus-visible:outline-white cursor-pointer"
-          >
-            <Diamond size={4} filled={!isPaused} />
-            <span>{isPaused ? "PAUSED" : "LIVE"}</span>
-          </button>
-        </div>
-      </div>
-
+    <div
+      ref={containerRef}
+      role="region"
+      aria-label={laneAriaLabel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="relative w-full overflow-hidden touch-pan-y cursor-grab active:cursor-grabbing select-none"
+    >
+      {/* Lateral gradient edge fade masks */}
       <div
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onFocus={() => setIsPaused(true)}
-        onBlur={() => setIsPaused(false)}
-        className="relative w-full overflow-hidden focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
-        aria-label="Compact team stream. Use arrow keys to step between members."
+        aria-hidden="true"
+        className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none"
+      />
+
+      {/* Moving Track */}
+      <div
+        ref={trackRef}
+        className="flex items-start w-max will-change-transform"
       >
+        {/* Cycle A: Primary accessible member instances */}
         <div
-          ref={streamRef}
-          aria-live="polite"
-          className="relative h-[280px] sm:h-[300px] lg:h-[320px] flex items-end justify-center"
+          ref={cycleRef}
+          className="flex items-start gap-3 sm:gap-4 md:gap-5 pr-3 sm:pr-4 md:pr-5 shrink-0"
         >
-          {TEAM_MEMBERS.map((member, idx) => {
-            const offset = circularOffset(idx, activeIndex, totalMembers);
-            const distance = Math.abs(offset);
-            if (distance > neighborReach) return null;
-
-            const isFocus = offset === 0;
-            const scale = isFocus ? 1 : distance === 1 ? 0.78 : 0.62;
-            const opacity = isFocus ? 1 : distance === 1 ? 0.42 : 0.2;
-            const slot = isFocus ? 150 : neighborReach === 1 ? 108 : 118;
-            const githubUrl = findLink(member.links, "github");
-            const linkedinUrl = findLink(member.links, "linkedin");
-
-            return (
-              <div
-                key={member.id || idx}
-                className="absolute bottom-0 flex flex-col items-center"
-                style={{
-                  transform: `translateX(${offset * slot}px) scale(${scale})`,
-                  opacity,
-                  zIndex: 10 - distance,
-                  transition: reducedMotion
-                    ? "none"
-                    : "transform 550ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => goToMember(idx)}
-                  aria-current={isFocus ? "true" : undefined}
-                  aria-label={`${member.name}, ${member.role}`}
-                  className="cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-white"
-                >
-                  <div
-                    className={`relative mx-auto mb-3 overflow-hidden border bg-neutral-950/40 flex items-center justify-center ${
-                      isFocus
-                        ? "w-[132px] h-[160px] sm:w-[148px] sm:h-[176px] lg:w-[168px] lg:h-[200px] border-white/35"
-                        : "w-[80px] h-[104px] sm:w-[92px] sm:h-[118px] lg:w-[104px] lg:h-[132px] border-white/12"
-                    }`}
-                  >
-                    <MemberPortrait member={member} focused={isFocus} />
-                  </div>
-
-                  {isFocus ? (
-                    <div className="w-[168px] sm:w-[196px] lg:w-[210px] mx-auto text-center space-y-1.5">
-                      <h3 className="text-base sm:text-lg lg:text-xl font-light tracking-tight text-white">
-                        {member.name}
-                      </h3>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/55 leading-snug">
-                        {member.role}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="w-[96px] sm:w-[110px] mx-auto text-center font-mono text-[10px] uppercase tracking-[0.12em] text-white/40 truncate">
-                      {member.name.split(" ")[0]}
-                    </p>
-                  )}
-                </button>
-
-                {isFocus && (githubUrl || linkedinUrl) && (
-                  <div className="mt-2.5 flex items-center justify-center gap-2">
-                    {githubUrl && (
-                      <a
-                        href={githubUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`${member.name} on GitHub`}
-                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                      >
-                        <GitHubIcon className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                    {linkedinUrl && (
-                      <a
-                        href={linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`${member.name} on LinkedIn`}
-                        className="w-7 h-7 border border-white/20 hover:border-white text-white/70 hover:text-white flex items-center justify-center transition-colors focus-visible:outline-white"
-                      >
-                        <LinkedInIcon className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {cycleMembers.map((member, idx) => (
+            <MemberCard
+              key={`primary-${member.id || idx}-${idx}`}
+              member={member}
+              isClone={false}
+              onLinkClick={handleLinkClick}
+            />
+          ))}
         </div>
 
-        <div className="mt-5 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={prevMember}
-            aria-label="Previous team steward"
-            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={nextMember}
-            aria-label="Next team steward"
-            className="w-8 h-8 border border-white/20 hover:border-white text-white flex items-center justify-center font-mono text-xs transition-colors cursor-pointer focus-visible:outline-white"
-          >
-            →
-          </button>
+        {/* Cycle B: Cloned sequence for continuous seamless loop */}
+        <div
+          aria-hidden="true"
+          className="flex items-start gap-3 sm:gap-4 md:gap-5 pr-3 sm:pr-4 md:pr-5 shrink-0 select-none"
+        >
+          {cycleMembers.map((member, idx) => (
+            <MemberCard
+              key={`clone-${member.id || idx}-${idx}`}
+              member={member}
+              isClone={true}
+              onLinkClick={handleLinkClick}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Stable deterministic combined roster: TEAM_MEMBERS + ALUMNI_MEMBERS
+const ALUMNI_AS_MEMBERS: MemberItem[] = ALUMNI_MEMBERS.map((alumnus: AlumniItem) => ({
+  id: alumnus.id,
+  name: alumnus.name,
+  role: alumnus.formerRole,
+  bio: alumnus.contributions,
+  links: alumnus.links,
+  placeholder: false,
+}));
+
+const ALL_PEOPLE: MemberItem[] = [...TEAM_MEMBERS, ...ALUMNI_AS_MEMBERS];
+
+export function TeamSection() {
+  const reducedMotion = usePrefersReducedMotion();
+
+  // Split authentic members deterministically across two independent horizontal rows
+  // Row 1: even indices, drifts right (→)
+  // Row 2: odd indices, drifts left (←)
+  const row1Members = ALL_PEOPLE.filter((_, idx) => idx % 2 === 0);
+  const row2Members = ALL_PEOPLE.filter((_, idx) => idx % 2 !== 0);
+
+  return (
+    <section
+      id="team"
+      aria-label="People: Team and Alumni Roster"
+      className="relative w-full text-white bg-transparent py-10 sm:py-16 lg:py-20 overflow-hidden select-none"
+    >
+      <span id="people" className="sr-only" aria-hidden="true" />
+      <div className="w-full max-w-[1240px] mx-auto px-6 sm:px-10 lg:px-12 flex flex-col mb-6 sm:mb-8">
+        {/* Clean PEOPLE Identifier */}
+        <div className="border-b border-white/[0.08] pb-3">
+          <h2 className="text-xs sm:text-sm font-mono tracking-[0.24em] uppercase text-white/80 font-medium">
+            PEOPLE
+          </h2>
         </div>
       </div>
 
-      <AlumniSection />
-    </Section>
+      {/* Two-Lane Continuous Horizontal People Roster */}
+      <div className="flex flex-col space-y-4 sm:space-y-6 w-full">
+        {/* ROW 1: Continuously moves rightward (→) */}
+        <TeamLane
+          members={row1Members}
+          direction="right"
+          reducedMotion={reducedMotion}
+          laneAriaLabel="People Roster Lane 1"
+        />
+
+        {/* ROW 2: Continuously moves leftward (←) */}
+        <TeamLane
+          members={row2Members}
+          direction="left"
+          reducedMotion={reducedMotion}
+          laneAriaLabel="People Roster Lane 2"
+        />
+      </div>
+    </section>
   );
 }

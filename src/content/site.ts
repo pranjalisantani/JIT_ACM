@@ -12,7 +12,6 @@ export const SITE_CONFIG = {
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://acm-face.org",
   year: 2026,
   scrollTarget: "#about",
-  placeholder: true, // Pending owner confirmation of official chapter charter
 } as const;
 
 export const HERO_STATEMENT = {
@@ -61,12 +60,22 @@ export const SITE_NAV_LINKS = [
   { label: "About", href: "#about" },
   { label: "Events", href: "#events" },
   { label: "Projects", href: "#projects" },
-  { label: "Team", href: "#team" },
+  { label: "People", href: "#team" },
+] as const;
+
+export const FOOTER_FOCUS_NAV = [
+  { label: "About", href: "#about" },
+  { label: "Events", href: "#events" },
+  { label: "Projects", href: "#projects" },
+  { label: "People", href: "#team" },
+  { label: "Contact", href: "mailto:contact@acm-face.org" },
 ] as const;
 
 export const FOOTER_DATA = {
   wordmark: "ACM FACE",
+  tagline: "ADVANCING COMPUTING. BUILDING PEOPLE.",
   institutionalNote: "ACM Student Chapter · Computing Society & Systems Research Forum",
   copyright: "© 2026 ACM FACE. All rights reserved.",
-  placeholder: true,
+  githubUrl: "https://github.com/acm-face",
 };
+
