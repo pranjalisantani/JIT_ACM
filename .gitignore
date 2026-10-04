@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local diagnostic & qa screenshots
+/*.png
+canvas_only.png
+cursor_*.png
+fresh_*.png
+hero_*.png
+page_full.png
+test_*.png
+without_site_wrapper.png
