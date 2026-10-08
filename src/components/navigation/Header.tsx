@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Diamond } from "@/components/ui/Diamond";
+import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 
 const NAV_LINKS = [
   { label: "About", href: "#about" },
@@ -68,6 +69,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("hero");
+  const reducedMotion = usePrefersReducedMotion();
 
   const menuBtnRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -203,10 +205,20 @@ export function Header() {
                 const targetId = link.href.replace("#", "");
                 const isActive = activeSection === targetId;
 
+                const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  e.preventDefault();
+                  const target = document.getElementById(targetId);
+                  if (target) {
+                    target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+                    target.focus({ preventScroll: true });
+                  }
+                };
+
                 return (
                   <a
                     key={link.href}
                     href={link.href}
+                    onClick={handleNavClick}
                     className={`relative py-1 flex items-center gap-1.5 uppercase tracking-[0.16em] transition-opacity duration-200 ${
                       isActive ? "text-white opacity-100 font-medium" : "text-white opacity-60 hover:opacity-100"
                     }`}
@@ -333,12 +345,22 @@ export function Header() {
               const targetId = link.href.replace("#", "");
               const isActive = activeSection === targetId;
 
+              const handleMobileNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                closeMenu();
+                const target = document.getElementById(targetId);
+                if (target) {
+                  target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+                  target.focus({ preventScroll: true });
+                }
+              };
+
               return (
                 <a
                   key={link.href}
                   ref={idx === 0 ? firstLinkRef : undefined}
                   href={link.href}
-                  onClick={closeMenu}
+                  onClick={handleMobileNavClick}
                   className="flex items-center gap-4 text-2xl font-light tracking-tight text-white hover:text-white/70 transition-colors"
                 >
                   <Diamond size={6} filled={isActive} />

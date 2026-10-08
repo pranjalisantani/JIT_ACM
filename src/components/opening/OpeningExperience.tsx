@@ -113,12 +113,16 @@ export function OpeningExperience({ onEnter }: OpeningExperienceProps) {
     if (isDisposedRef.current) return;
     isDisposedRef.current = true;
 
-    // 1. Kill GSAP timelines & tweens
+    // 1. Kill GSAP timelines & tweens belonging to this opening overlay only
     if (timelineRef.current) {
       timelineRef.current.kill();
       timelineRef.current = null;
     }
-    gsap.killTweensOf("*");
+    if (containerRef.current) gsap.killTweensOf(containerRef.current);
+    if (acmRef.current) gsap.killTweensOf(acmRef.current);
+    if (faceGroupRef.current) gsap.killTweensOf(faceGroupRef.current);
+    if (captionRef.current) gsap.killTweensOf(captionRef.current);
+    if (skipBtnRef.current) gsap.killTweensOf(skipBtnRef.current);
 
     // 2. Clear voice audio playback
     clearVoicePlayback();
@@ -145,8 +149,11 @@ export function OpeningExperience({ onEnter }: OpeningExperienceProps) {
     // 6. Remove overlay from view
     setIsDismissed(true);
 
-    // 7. Invoke completion callback
+    // 7. Invoke completion callback & notify listeners of opening completion
     onEnter?.();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("acm:opening-complete"));
+    }
 
     // 8. Return focus to top of page / main content
     const mainTarget = document.getElementById("main-content") || document.querySelector("main");

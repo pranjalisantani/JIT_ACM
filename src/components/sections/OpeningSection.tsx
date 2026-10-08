@@ -44,53 +44,123 @@ export function OpeningSection() {
   }, [reducedMotion]);
 
   useEffect(() => {
-    if (reducedMotion) return;
-    const isPaused = document.documentElement.getAttribute("data-motion") === "paused";
-    if (isPaused) return;
+    // If reduced motion is requested or motion is paused, ensure hero is immediately fully visible
+    if (reducedMotion || (typeof document !== "undefined" && document.documentElement.getAttribute("data-motion") === "paused")) {
+      const elements = [metaRef.current, titleRef.current, contentRef.current, pillarsRef.current, containerRef.current];
+      elements.forEach((el) => {
+        if (el) gsap.set(el, { opacity: 1, clearProps: "opacity,transform" });
+      });
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      // Cinematic editorial entrance
-      const tl = gsap.timeline({ delay: 0.2 });
+      let hasRevealed = false;
+      let failsafeTimer: NodeJS.Timeout | null = null;
 
-      if (metaRef.current) {
-        tl.fromTo(
-          metaRef.current,
-          { opacity: 0, y: -12 },
-          { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }
-        );
-      }
+      const playReveal = () => {
+        if (hasRevealed) return;
+        hasRevealed = true;
 
-      if (titleRef.current) {
-        tl.fromTo(
-          titleRef.current,
-          { opacity: 0, y: 28, letterSpacing: "0.04em" },
-          {
-            opacity: 1,
-            y: 0,
-            letterSpacing: "-0.03em",
-            duration: 1.0,
-            ease: "power3.out",
+        const elements = [metaRef.current, titleRef.current, contentRef.current, pillarsRef.current];
+
+        // Failsafe: guarantee all hero text elements are 100% visible after at most 2.5s
+        failsafeTimer = setTimeout(() => {
+          elements.forEach((el) => {
+            if (el) gsap.set(el, { opacity: 1, clearProps: "opacity,transform" });
+          });
+        }, 2500);
+
+        // Cinematic editorial entrance
+        const tl = gsap.timeline({
+          delay: 0.1,
+          onComplete: () => {
+            if (failsafeTimer) clearTimeout(failsafeTimer);
+            elements.forEach((el) => {
+              if (el) gsap.set(el, { opacity: 1, clearProps: "opacity,transform" });
+            });
           },
-          "-=0.4"
-        );
-      }
+        });
 
-      if (contentRef.current) {
-        tl.fromTo(
-          contentRef.current,
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" },
-          "-=0.5"
-        );
-      }
+        if (metaRef.current) {
+          tl.fromTo(
+            metaRef.current,
+            { opacity: 0, y: -12 },
+            { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }
+          );
+        }
 
-      if (pillarsRef.current) {
-        tl.fromTo(
-          pillarsRef.current,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" },
-          "-=0.4"
-        );
+        if (titleRef.current) {
+          tl.fromTo(
+            titleRef.current,
+            { opacity: 0, y: 28, letterSpacing: "0.04em" },
+            {
+              opacity: 1,
+              y: 0,
+              letterSpacing: "-0.03em",
+              duration: 1.0,
+              ease: "power3.out",
+            },
+            "-=0.4"
+          );
+        }
+
+        if (contentRef.current) {
+          tl.fromTo(
+            contentRef.current,
+            { opacity: 0, y: 16 },
+            { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" },
+            "-=0.5"
+          );
+        }
+
+        if (pillarsRef.current) {
+          tl.fromTo(
+            pillarsRef.current,
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" },
+            "-=0.4"
+          );
+        }
+      };
+
+      // Check whether opening overlay is active
+      const isOpeningActive =
+        typeof document !== "undefined" &&
+        document.documentElement.getAttribute("data-opening") === "1";
+
+      if (isOpeningActive) {
+        // Wait until opening experience completes or is dismissed
+        const handleOpeningComplete = () => {
+          playReveal();
+        };
+
+        window.addEventListener("acm:opening-complete", handleOpeningComplete, { once: true });
+
+        // MutationObserver fallback watching for data-opening removal
+        const observer = new MutationObserver(() => {
+          if (document.documentElement.getAttribute("data-opening") !== "1") {
+            observer.disconnect();
+            playReveal();
+          }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-opening"] });
+
+        // Maximum wait safety timeout (overlay duration is max 9.0s)
+        const openingTimeout = setTimeout(() => {
+          observer.disconnect();
+          playReveal();
+        }, 9500);
+
+        // Store cleanup handles
+        return () => {
+          window.removeEventListener("acm:opening-complete", handleOpeningComplete);
+          observer.disconnect();
+          clearTimeout(openingTimeout);
+          if (failsafeTimer) clearTimeout(failsafeTimer);
+        };
+      } else {
+        // No opening overlay — reveal immediately on normal page load / refresh
+        playReveal();
       }
 
       // Spatial scroll choreography: Home gently recedes into depth as scroll begins
@@ -106,8 +176,27 @@ export function OpeningSection() {
             start: "15% top",
             end: "bottom top",
             scrub: 0.6,
+            invalidateOnRefresh: true,
+            fastScrollEnd: true,
           },
         });
+
+        // Ensure ScrollTrigger coordinates update accurately after fonts, images, and layout settle
+        const refreshST = () => {
+          ScrollTrigger.refresh();
+        };
+
+        if (typeof document !== "undefined" && "fonts" in document) {
+          document.fonts.ready.then(refreshST).catch(() => {});
+        }
+
+        if (typeof window !== "undefined") {
+          if (document.readyState === "complete") {
+            requestAnimationFrame(refreshST);
+          } else {
+            window.addEventListener("load", refreshST, { once: true });
+          }
+        }
       }
     }, containerRef);
 
@@ -119,7 +208,7 @@ export function OpeningSection() {
       id="hero"
       ref={containerRef}
       aria-label="JIT ACM Student Chapter Introduction"
-      className="relative w-full min-h-[92vh] sm:min-h-screen flex flex-col justify-between pt-28 sm:pt-32 pb-12 sm:pb-16 px-6 sm:px-10 lg:px-16 text-white overflow-hidden will-change-transform"
+      className="relative w-full min-h-[92svh] sm:min-h-[100svh] flex flex-col justify-between pt-28 sm:pt-32 pb-12 sm:pb-16 px-6 sm:px-10 lg:px-16 text-white overflow-hidden will-change-transform"
     >
       <div className="w-full max-w-[1440px] mx-auto flex flex-col justify-between flex-1 relative">
         {/* Top Meta Line: Chapter Identity */}
@@ -184,6 +273,14 @@ export function OpeningSection() {
           <div className="flex items-center justify-between font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.16em] text-white/50">
             <a
               href="#about"
+              onClick={(e) => {
+                e.preventDefault();
+                const target = document.getElementById("about");
+                if (target) {
+                  target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+                  target.focus({ preventScroll: true });
+                }
+              }}
               className="flex items-center gap-2 hover:text-white transition-colors py-2 focus-visible:outline-white group"
             >
               <Diamond size={5} filled={false} />

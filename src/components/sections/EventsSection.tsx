@@ -1,10 +1,30 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { Diamond } from "@/components/ui/Diamond";
 import { EVENTS_DATA } from "@/content/events";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { registerScrollTrigger, gsap } from "@/lib/motion/gsap";
+
+// Viewport detection hooks
+function subscribeViewport(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mqMobile = window.matchMedia("(max-width: 767px)");
+  const handler = () => callback();
+  mqMobile.addEventListener("change", handler);
+  return () => {
+    mqMobile.removeEventListener("change", handler);
+  };
+}
+
+function getIsMobileSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
 
 interface ParsedDate {
   month: string;
@@ -15,7 +35,6 @@ interface ParsedDate {
 }
 
 function parseEventDate(dateLabel: string, dateISO: string | null): ParsedDate {
-  // Extract month, day, year, time from dateLabel (e.g. "OCT 28, 2026 · 17:30 IST")
   const parts = dateLabel.split("·");
   const datePart = parts[0]?.trim() || "";
   const timePart = parts[1]?.trim() || "";
@@ -45,6 +64,9 @@ export function EventsSection() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const scrollTrackRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
+
+  // Viewport detection
+  const isMobile = useSyncExternalStore(subscribeViewport, getIsMobileSnapshot, getServerSnapshot);
 
   const totalEvents = EVENTS_DATA.length;
   const currentEvent = EVENTS_DATA[activeIndex] || EVENTS_DATA[0];
@@ -100,6 +122,7 @@ export function EventsSection() {
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioning = useRef<boolean>(false);
+  const userInteractingRef = useRef<boolean>(false);
 
   // User-driven or automated selection of a date
   const selectDate = useCallback(
@@ -160,11 +183,13 @@ export function EventsSection() {
   const startTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (reducedMotion) return;
+    // On mobile, don't auto-cycle if user is interacting
+    if (isMobile && userInteractingRef.current) return;
 
     timerRef.current = setTimeout(() => {
       selectDate((activeIndex + 1) % totalEvents);
     }, 5000);
-  }, [activeIndex, reducedMotion, selectDate, totalEvents]);
+  }, [activeIndex, reducedMotion, selectDate, totalEvents, isMobile]);
 
   useEffect(() => {
     startTimer();
@@ -173,14 +198,46 @@ export function EventsSection() {
     };
   }, [activeIndex, startTimer]);
 
+  // Track user interaction to pause auto-cycle on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const handleInteraction = () => {
+      userInteractingRef.current = true;
+      // Reset after 10s of inactivity
+      setTimeout(() => {
+        userInteractingRef.current = false;
+      }, 10000);
+    };
+
+    section.addEventListener("pointerdown", handleInteraction, { passive: true });
+    section.addEventListener("keydown", handleInteraction, { passive: true });
+    section.addEventListener("wheel", handleInteraction, { passive: true });
+
+    return () => {
+      section.removeEventListener("pointerdown", handleInteraction);
+      section.removeEventListener("keydown", handleInteraction);
+      section.removeEventListener("wheel", handleInteraction);
+    };
+  }, [isMobile]);
+
   // Ensure active date tab card stays visible in horizontal overflow track
   useEffect(() => {
-    if (scrollTrackRef.current) {
-      const activeBtn = scrollTrackRef.current.children[activeIndex] as HTMLElement | undefined;
-      if (activeBtn && scrollTrackRef.current.scrollWidth > scrollTrackRef.current.clientWidth) {
-        activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-      }
-    }
+    const track = scrollTrackRef.current;
+    if (!track) return;
+    const activeBtn = track.children[activeIndex] as HTMLElement | undefined;
+    if (!activeBtn || track.scrollWidth <= track.clientWidth) return;
+
+    // Horizontal-only scroll: calculate center alignment without vertical scroll side-effects
+    const btnLeft = activeBtn.offsetLeft;
+    const btnWidth = activeBtn.offsetWidth;
+    const trackWidth = track.clientWidth;
+    const targetScrollLeft = btnLeft + btnWidth / 2 - trackWidth / 2;
+    const clamped = Math.max(0, Math.min(targetScrollLeft, track.scrollWidth - trackWidth));
+
+    track.scrollTo({ left: clamped, behavior: "smooth" });
   }, [activeIndex]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -191,6 +248,22 @@ export function EventsSection() {
       e.preventDefault();
       selectDate((activeIndex - 1 + totalEvents) % totalEvents);
     }
+  };
+
+  // Responsive content helpers
+  const getSummary = () => {
+    if (isMobile) {
+      // Truncate to ~3 lines on mobile
+      const words = currentEvent.summary.split(" ");
+      if (words.length > 45) {
+        return words.slice(0, 45).join(" ") + "…";
+      }
+    }
+    return currentEvent.summary;
+  };
+
+  const showLocation = () => {
+    return currentEvent.location && currentEvent.location.trim() !== "";
   };
 
   return (
@@ -250,9 +323,7 @@ export function EventsSection() {
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────
-            MAIN VISUAL ANCHOR: HORIZONTAL DATE / CALENDAR SYSTEM
-        ───────────────────────────────────────────────────────────── */}
+        {/* MAIN VISUAL ANCHOR: HORIZONTAL DATE / CALENDAR SYSTEM */}
         <div className="relative w-full border-t border-b border-white/[0.12] py-3.5 sm:py-5 mb-6 sm:mb-8">
           {/* Calendar Rail Subheader */}
           <div className="flex items-center justify-between font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-white/35 pb-2.5 px-1 border-b border-white/[0.06] mb-3 sm:mb-4">
@@ -272,7 +343,7 @@ export function EventsSection() {
             ref={scrollTrackRef}
             role="tablist"
             aria-label="Calendar Timeline Date Track"
-            className="flex sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3.5 overflow-x-auto snap-x scrollbar-none pb-2 sm:pb-0 -mx-2 px-2 sm:mx-0 sm:px-0"
+            className="flex sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3.5 overflow-x-auto snap-x scrollbar-none pb-2 sm:pb-0 px-2 sm:px-0"
           >
             {EVENTS_DATA.map((evt, idx) => {
               const isSelected = idx === activeIndex;
@@ -309,8 +380,7 @@ export function EventsSection() {
                           : isClosingSoon
                           ? "bg-amber-400 animate-pulse"
                           : "bg-sky-400"
-                      }`}
-                    />
+                      }`} />
                   </div>
 
                   {/* Center: Large Spatial Date Numeral */}
@@ -318,8 +388,7 @@ export function EventsSection() {
                     <div
                       className={`text-2xl sm:text-4xl lg:text-5xl font-light tracking-tighter leading-none transition-colors duration-200 ${
                         isSelected ? "text-white font-normal" : "text-white/60 group-hover:text-white/90"
-                      }`}
-                    >
+                      }`}>
                       {date.day}
                     </div>
                   </div>
@@ -336,10 +405,7 @@ export function EventsSection() {
 
                   {/* Active Anchor Baseline Hairline */}
                   {isSelected && (
-                    <div
-                      aria-hidden="true"
-                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-sky-400"
-                    />
+                    <div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-[2px] bg-sky-400" />
                   )}
                 </button>
               );
@@ -347,9 +413,7 @@ export function EventsSection() {
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────
-            BELOW CALENDAR: SELECTED EVENT EDITORIAL DOSSIER STAGE
-        ───────────────────────────────────────────────────────────── */}
+        {/* BELOW CALENDAR: SELECTED EVENT EDITORIAL DOSSIER STAGE */}
         <div
           tabIndex={0}
           onKeyDown={handleKeyDown}
@@ -358,17 +422,14 @@ export function EventsSection() {
           className="relative w-full border border-white/[0.12] bg-neutral-950/75 backdrop-blur-md overflow-hidden focus:outline-none focus:ring-1 focus:ring-sky-400/50"
         >
           {/* Subtle Lateral Luminescence Accent */}
-          <div
-            aria-hidden="true"
-            className="absolute top-0 right-0 w-96 h-96 bg-sky-500/[0.03] rounded-full blur-3xl pointer-events-none"
-          />
+          <div aria-hidden="true" className="absolute top-0 right-0 w-96 h-96 bg-sky-500/[0.03] rounded-full blur-3xl pointer-events-none" />
 
           <div
             ref={stageRef}
             id={`panel-${currentEvent.slug}`}
             role="tabpanel"
             aria-labelledby={`tab-${currentEvent.slug}`}
-            className="relative z-10 p-6 sm:p-8 lg:p-10 min-h-[320px] flex flex-col justify-between"
+            className={`relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col justify-between ${isMobile ? "min-h-[240px]" : "min-h-[320px]"}`}
           >
             {/* Top Dossier Technical Metadata Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.10] pb-4 sm:pb-5">
@@ -384,8 +445,7 @@ export function EventsSection() {
                       : currentEvent.status === "closing-soon"
                       ? "border-amber-400/40 text-amber-300 bg-amber-400/[0.08]"
                       : "border-white/15 text-white/40 bg-white/[0.02]"
-                  }`}
-                >
+                  }`}>
                   {currentEvent.status === "closing-soon"
                     ? "CLOSING SOON"
                     : currentEvent.status === "open"
@@ -412,14 +472,14 @@ export function EventsSection() {
               </h3>
 
               <div className="pt-2 flex flex-wrap items-center gap-3 font-mono text-xs text-white/50 uppercase tracking-[0.16em]">
-                <span className="text-white/80">{currentEvent.location}</span>
-                <span>·</span>
+                {showLocation() && <span className="text-white/80">{currentEvent.location}</span>}
+                {showLocation() && <span>·</span>}
                 <span>{activeParsed.dayOfWeek} SESSIONS</span>
               </div>
 
               {/* Concise Summary — Derived Strictly from Existing Data */}
               <p className="text-white/70 text-sm sm:text-base font-light leading-relaxed max-w-3xl pt-2">
-                {currentEvent.summary}
+                {getSummary()}
               </p>
             </div>
 
@@ -430,8 +490,7 @@ export function EventsSection() {
                   type="button"
                   onClick={() => selectDate((activeIndex - 1 + totalEvents) % totalEvents)}
                   aria-label="Previous calendar event"
-                  className="px-3 py-2 border border-white/20 hover:border-white text-white/70 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
-                >
+                  className="px-3 py-2 border border-white/20 hover:border-white text-white/70 hover:text-white transition-colors cursor-pointer flex items-center gap-2">
                   <span>←</span>
                   <span className="text-[10px] tracking-wider uppercase">PREV</span>
                 </button>
@@ -440,8 +499,7 @@ export function EventsSection() {
                   type="button"
                   onClick={() => selectDate((activeIndex + 1) % totalEvents)}
                   aria-label="Next calendar event"
-                  className="px-3 py-2 border border-white/20 hover:border-white text-white/70 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
-                >
+                  className="px-3 py-2 border border-white/20 hover:border-white text-white/70 hover:text-white transition-colors cursor-pointer flex items-center gap-2">
                   <span className="text-[10px] tracking-wider uppercase">NEXT</span>
                   <span>→</span>
                 </button>
@@ -457,8 +515,7 @@ export function EventsSection() {
                   <a
                     href={currentEvent.registerUrl}
                     aria-label={`Register for ${currentEvent.title}`}
-                    className="font-mono text-xs uppercase tracking-[0.2em] px-7 py-3 border border-sky-300 bg-sky-300 text-black hover:bg-white hover:border-white transition-colors inline-flex items-center gap-2 font-medium"
-                  >
+                    className="font-mono text-xs uppercase tracking-[0.2em] px-7 py-3 border border-sky-300 bg-sky-300 text-black hover:bg-white hover:border-white transition-colors inline-flex items-center gap-2 font-medium">
                     <span>REGISTER FORUM</span>
                     <span>→</span>
                   </a>

@@ -81,7 +81,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} scroll-smooth dark min-h-screen bg-black antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} dark min-h-screen bg-black antialiased`}
     >
       <head>
         <script

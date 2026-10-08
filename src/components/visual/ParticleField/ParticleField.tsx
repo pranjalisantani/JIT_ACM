@@ -578,7 +578,7 @@ export function ParticleField() {
       className="fixed inset-0 z-0 pointer-events-none overflow-hidden select-none bg-black"
       style={{
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
       }}
     >
       {/* Soft atmospheric white/cotton-like haze layer providing gentle spatial depth */}

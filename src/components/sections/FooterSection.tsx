@@ -166,15 +166,27 @@ export function FooterSection() {
         {/* 2. NAVIGATION AREA: Focus Navigation with Generous Negative Space */}
         <div ref={topNavRef} className="will-change-transform mb-10 sm:mb-14">
           <nav aria-label="Footer Navigation" className="flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-14">
-            {FOOTER_FOCUS_NAV.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="font-mono text-xs sm:text-[13px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors focus-visible:outline-sky-400 py-1"
-              >
-                {item.label}
-              </a>
-            ))}
+            {FOOTER_FOCUS_NAV.map((item) => {
+              const targetId = item.href.replace("#", "");
+              const handleFooterNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                const target = document.getElementById(targetId);
+                if (target) {
+                  target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+                  target.focus({ preventScroll: true });
+                }
+              };
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={handleFooterNavClick}
+                  className="font-mono text-xs sm:text-[13px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors focus-visible:outline-sky-400 py-1"
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </nav>
         </div>
 

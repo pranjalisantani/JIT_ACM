@@ -1,12 +1,40 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { gsap } from "@/lib/motion/gsap";
 import { Diamond } from "@/components/ui/Diamond";
 import { GALLERY_ITEMS } from "@/content/gallery";
 import { usePrefersReducedMotion } from "@/lib/motion/tokens";
 import { GalleryPhoto } from "@/types";
+
+// Viewport detection hooks
+function subscribeViewport(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mqMobile = window.matchMedia("(max-width: 767px)");
+  const mqTablet = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+  const handler = () => callback();
+  mqMobile.addEventListener("change", handler);
+  mqTablet.addEventListener("change", handler);
+  return () => {
+    mqMobile.removeEventListener("change", handler);
+    mqTablet.removeEventListener("change", handler);
+  };
+}
+
+function getIsMobileSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
+function getIsTabletSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(min-width: 768px) and (max-width: 1023px)").matches;
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
 
 // Determine aspect label from dimensions
 function getCardAspect(width: number, height: number): "16:9" | "4:3" | "3:4" | "1:1" {
@@ -32,6 +60,13 @@ function getCardWidthClass(aspect: "16:9" | "4:3" | "3:4" | "1:1"): string {
   }
 }
 
+// Responsive card height classes
+function getCardHeightClass(isMobile: boolean, isTablet: boolean): string {
+  if (isMobile) return "h-[200px]";
+  if (isTablet) return "h-[270px]";
+  return "h-[360px]";
+}
+
 interface StreamItemData {
   photo: GalleryPhoto;
   originalIndex: number;
@@ -47,6 +82,24 @@ export function GallerySection() {
 
   const reducedMotion = usePrefersReducedMotion();
   const [isPaused, setIsPaused] = useState(false);
+
+  // Viewport detection
+  const isMobile = useSyncExternalStore(subscribeViewport, getIsMobileSnapshot, getServerSnapshot);
+  const isTablet = useSyncExternalStore(subscribeViewport, getIsTabletSnapshot, getServerSnapshot);
+
+  // Responsive drift speed: paused by default on mobile, slower on tablet
+  const getDriftSpeed = useCallback(() => {
+    if (isMobile) return 0; // Paused by default on mobile
+    if (isTablet) return 12; // Half speed on tablet
+    return 24; // Full speed on desktop
+  }, [isMobile, isTablet]);
+
+  // Responsive vignette width
+  const getVignetteWidth = useCallback(() => {
+    if (isMobile) return "w-4"; // 16px on mobile
+    if (isTablet) return "w-12"; // 48px on tablet
+    return "w-24"; // 96px on desktop
+  }, [isMobile, isTablet]);
 
   // Position, physics, and measurement refs (no re-renders during 60/120fps ticker)
   const offsetRef = useRef(0);
@@ -212,7 +265,7 @@ export function GallerySection() {
       return;
     }
 
-    const DRIFT_SPEED = 24; // pixels per second — subtle, cinematic, legible
+    const DRIFT_SPEED = getDriftSpeed();
 
     const tick = (_time: number, deltaTime: number) => {
       if (isPaused || isPointerDownRef.current || isDraggingRef.current) return;
@@ -225,9 +278,11 @@ export function GallerySection() {
       updateStreamPositions();
     };
 
-    gsap.ticker.add(tick);
+    if (DRIFT_SPEED > 0) {
+      gsap.ticker.add(tick);
+    }
     return () => gsap.ticker.remove(tick);
-  }, [isPaused, reducedMotion, normalizeOffset, updateStreamPositions]);
+  }, [isPaused, reducedMotion, normalizeOffset, updateStreamPositions, getDriftSpeed]);
 
   // ==========================================
   // Pointer Drag Handlers (Desktop & Touch)
@@ -320,7 +375,7 @@ export function GallerySection() {
 
   // Directional step controls for accessibility and click navigation
   const handleStep = (direction: "left" | "right") => {
-    const stepDist = 420;
+    const stepDist = isMobile ? 280 : 420; // Smaller step on mobile
     const target = offsetRef.current + (direction === "right" ? stepDist : -stepDist);
     gsap.to(offsetRef, {
       current: target,
@@ -332,6 +387,12 @@ export function GallerySection() {
       },
     });
   };
+
+  // Responsive render helpers
+  const showYearBadge = () => !isMobile;
+  const showAspectLabel = () => !isMobile;
+  const showStepButtons = () => !isMobile; // Only pause button on mobile
+  const showDragHint = () => !isMobile;
 
   return (
     <section
@@ -377,36 +438,38 @@ export function GallerySection() {
               className="px-3 py-1.5 border border-white/20 hover:border-white text-white/80 hover:text-white font-mono text-[10px] uppercase tracking-wider transition-colors inline-flex items-center gap-2 focus-visible:outline-sky-400 cursor-pointer"
             >
               <Diamond size={3.5} filled={!isPaused} className={!isPaused ? "text-sky-400" : "text-white/40"} />
-              <span>{isPaused ? "STREAM PAUSED" : "AUTO-DRIFT"}</span>
+              <span>{isPaused ? "STREAM PAUSED" : isMobile ? "TAP TO DRIFT" : "AUTO-DRIFT"}</span>
             </button>
 
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => handleStep("left")}
-                aria-label="Scroll photo stream left"
-                className="w-7 h-7 border border-white/20 hover:border-white text-white/80 hover:text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-sky-400 cursor-pointer"
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStep("right")}
-                aria-label="Scroll photo stream right"
-                className="w-7 h-7 border border-white/20 hover:border-white text-white/80 hover:text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-sky-400 cursor-pointer"
-              >
-                →
-              </button>
-            </div>
+            {showStepButtons() && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleStep("left")}
+                  aria-label="Scroll photo stream left"
+                  className="w-7 h-7 border border-white/20 hover:border-white text-white/80 hover:text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-sky-400 cursor-pointer"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStep("right")}
+                  aria-label="Scroll photo stream right"
+                  className="w-7 h-7 border border-white/20 hover:border-white text-white/80 hover:text-white font-mono text-xs transition-colors flex items-center justify-center focus-visible:outline-sky-400 cursor-pointer"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Cinematic Horizontal Photographic Stream Container */}
       <div className="relative w-full overflow-hidden">
-        {/* Soft edge ambient vignetting */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-16 lg:w-24 bg-gradient-to-r from-black via-black/50 to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-16 lg:w-24 bg-gradient-to-l from-black via-black/50 to-transparent z-10" />
+        {/* Soft edge ambient vignetting - responsive width */}
+        <div className={`pointer-events-none absolute inset-y-0 left-0 ${getVignetteWidth()} bg-gradient-to-r from-black via-black/50 to-transparent z-10`} />
+        <div className={`pointer-events-none absolute inset-y-0 right-0 ${getVignetteWidth()} bg-gradient-to-l from-black via-black/50 to-transparent z-10`} />
 
         <div
           ref={containerRef}
@@ -425,6 +488,7 @@ export function GallerySection() {
               const isPriority = originalIndex === 0 && setIndex === 0;
               const aspectClass = getCardAspect(photo.width, photo.height);
               const widthClass = getCardWidthClass(aspectClass);
+              const heightClass = getCardHeightClass(isMobile, isTablet);
 
               return (
                 <div
@@ -434,7 +498,7 @@ export function GallerySection() {
                   }}
                   data-gallery-plate={originalIndex}
                   data-stream-index={streamIdx}
-                  className={`shrink-0 ${widthClass} h-[250px] sm:h-[310px] lg:h-[360px] transition-[border-color] duration-300`}
+                  className={`shrink-0 ${widthClass} ${heightClass} transition-[border-color] duration-300`}
                   style={{ willChange: "transform, opacity" }}
                 >
                   <div className="relative w-full h-full overflow-hidden border border-white/15 bg-neutral-950/80 rounded-none shadow-[0_4px_30px_rgba(0,0,0,0.6)] group transition-all duration-300">
@@ -453,16 +517,21 @@ export function GallerySection() {
                       PLATE // {String(originalIndex + 1).padStart(2, "0")}
                     </div>
 
-                    <div className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 px-2 py-0.5 bg-black/75 border border-white/15 font-mono text-[9px] uppercase tracking-widest text-sky-300/80 backdrop-blur-sm pointer-events-none">
-                      {photo.year || "2026"}
-                    </div>
+                    {showYearBadge() && (
+                      <div className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 px-2 py-0.5 bg-black/75 border border-white/15 font-mono text-[9px] uppercase tracking-widest text-sky-300/80 backdrop-blur-sm pointer-events-none">
+                        {photo.year || "2026"}
+                      </div>
+                    )}
 
                     {/* Bottom Ambient Vignette & Restrained Caption */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent opacity-85 group-hover:opacity-95 transition-opacity pointer-events-none" />
 
                     <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 pointer-events-none">
                       <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-sky-300/80 uppercase tracking-widest mb-1">
-                        <span>[{String(originalIndex + 1).padStart(2, "0")}] · {aspectClass}</span>
+                        <span>
+                          [{String(originalIndex + 1).padStart(2, "0")}]
+                          {showAspectLabel() && <span> · {aspectClass}</span>}
+                        </span>
                         <span className="text-white/40">ARCHIVE</span>
                       </div>
 
@@ -489,10 +558,12 @@ export function GallerySection() {
           <span>06 AUTHENTIC PLATES ARCHIVED</span>
         </div>
 
-        <div className="flex items-center gap-2 text-white/50">
-          <span>DRAG OR SWIPE TO EXPLORE</span>
-          <span className="text-sky-400">⟷</span>
-        </div>
+        {showDragHint() && (
+          <div className="flex items-center gap-2 text-white/50">
+            <span>DRAG OR SWIPE TO EXPLORE</span>
+            <span className="text-sky-400">⟷</span>
+          </div>
+        )}
       </div>
     </section>
   );

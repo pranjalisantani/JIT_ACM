@@ -69,7 +69,7 @@ function MemberCard({
 
   return (
     <div
-      className="flex flex-col w-[130px] sm:w-[150px] md:w-[170px] shrink-0 select-none group"
+      className="flex flex-col min-w-[130px] max-w-[170px] w-full sm:min-w-[150px] md:min-w-[170px] shrink-0 select-none group"
       aria-hidden={isClone ? "true" : undefined}
     >
       {/* Compact Portrait Frame with solid dark backdrop preventing particle bleed-through */}

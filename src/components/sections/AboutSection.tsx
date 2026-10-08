@@ -76,6 +76,18 @@ function dispatchFieldFocus(region: PillarKey | null) {
 export function AboutSection() {
   const reducedMotion = usePrefersReducedMotion();
 
+  // Mobile detection for responsive behavior
+  const isMobile = React.useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      const mq = window.matchMedia("(max-width: 767px)");
+      mq.addEventListener("change", callback);
+      return () => mq.removeEventListener("change", callback);
+    },
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+    () => false
+  );
+
   // Primary pinned scroll stage
   const sectionRef = useRef<HTMLElement | null>(null);
   const pinnedStageRef = useRef<HTMLDivElement | null>(null);
@@ -124,7 +136,44 @@ export function AboutSection() {
     if (!ScrollTrigger || !sectionRef.current || !pinnedStageRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Primary Master Pinned Timeline
+      if (isMobile) {
+        // Mobile: Simple fade-in reveal without pinning
+        const mobileTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            end: "bottom 60%",
+            scrub: 0.6,
+            onUpdate: (self) => {
+              const p = self.progress;
+              if (progressBarRef.current) {
+                progressBarRef.current.style.transform = `scaleX(${p})`;
+              }
+              if (progressPercentRef.current) {
+                progressPercentRef.current.textContent = `${String(Math.round(p * 100)).padStart(2, "0")}%`;
+              }
+              if (activeChapterPillRef.current) {
+                if (p < 0.25) activeChapterPillRef.current.textContent = "01 // THESIS";
+                else if (p < 0.51) activeChapterPillRef.current.textContent = "02 // PARADIGM";
+                else if (p < 0.77) activeChapterPillRef.current.textContent = "03 // CRAFT";
+                else activeChapterPillRef.current.textContent = "04 // PILLARS";
+              }
+            },
+          },
+        });
+
+        // Reveal all acts sequentially on mobile
+        mobileTl
+          .to([act1Ref.current, act2Ref.current, act3Ref.current], { opacity: 1, pointerEvents: "auto", duration: 0.1 }, 0)
+          .fromTo([act1Line1Ref.current, act1Line2Ref.current, act1Line3Ref.current, act1TagRef.current, act1SubRef.current], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }, 0)
+          .fromTo([act2Line1Ref.current, act2Line2Ref.current, act2Line3Ref.current, act2TagRef.current, act2SubRef.current], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }, 0.25)
+          .fromTo([act3Line1Ref.current, act3Line2Ref.current, act3Line3Ref.current, act3TagRef.current, act3FootRef.current], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }, 0.5)
+          .fromTo(act4Ref.current, { opacity: 0, y: 20, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "power2.out" }, 0.75);
+
+        return;
+      }
+
+      // Primary Master Pinned Timeline (Desktop)
       const masterTl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
@@ -399,7 +448,7 @@ export function AboutSection() {
       ctx.revert();
       dispatchFieldFocus(null);
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, isMobile]);
 
   // Reduced motion accessible fallback
   if (reducedMotion) {
@@ -469,10 +518,12 @@ export function AboutSection() {
       aria-label="03 / About: Perspective and Community Structure"
       className="relative w-full text-white bg-transparent select-none"
     >
-      {/* Scroll-Driven Pinned Viewport Stage */}
+      {/* Scroll-Driven Pinned Viewport Stage (Desktop) / Natural Flow (Mobile) */}
       <div
         ref={pinnedStageRef}
-        className="w-full h-screen relative flex flex-col justify-between px-6 sm:px-10 lg:px-16 py-8 sm:py-10 overflow-hidden pointer-events-auto"
+        className={`w-full relative flex flex-col justify-between px-6 sm:px-10 lg:px-16 py-8 sm:py-10 overflow-hidden pointer-events-auto ${
+          isMobile ? "min-h-auto" : "h-screen"
+        }`}
       >
         {/* Top Architectural HUD */}
         <header className="relative z-20 flex items-center justify-between border-b border-white/[0.10] pb-4 max-w-[1440px] w-full mx-auto">
@@ -483,7 +534,7 @@ export function AboutSection() {
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isMobile ? "flex" : "hidden md:flex"}`}>
             <span
               ref={activeChapterPillRef}
               className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.2em] px-2.5 py-1 border border-white/15 bg-black/50 text-sky-200/90"
@@ -497,14 +548,16 @@ export function AboutSection() {
         </header>
 
         {/* Center Stage: The Typographic Moments */}
-        <div className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto flex items-center justify-center my-auto">
+        <div className={`relative z-10 w-full max-w-[1440px] mx-auto ${
+          isMobile ? "flex flex-col items-start justify-start py-20 gap-16" : "flex-1 flex items-center justify-center my-auto"
+        }`}>
           {/* ─────────────────────────────────────────────────────────────
               MOMENT 1: THE INTELLECTUAL THESIS
           ───────────────────────────────────────────────────────────── */}
           <div
             ref={act1Ref}
             aria-hidden="false"
-            className="absolute inset-0 flex flex-col justify-center items-start text-left max-w-5xl"
+            className={`flex flex-col justify-center items-start text-left max-w-5xl ${isMobile ? "w-full" : "absolute inset-0"}`}
           >
             <div
               ref={act1TagRef}
@@ -548,7 +601,7 @@ export function AboutSection() {
           <div
             ref={act2Ref}
             aria-hidden="true"
-            className="absolute inset-0 flex flex-col justify-center items-center text-center max-w-5xl mx-auto"
+            className={`flex flex-col justify-center items-center text-center max-w-5xl mx-auto ${isMobile ? "w-full" : "absolute inset-0"}`}
           >
             <div
               ref={act2TagRef}
@@ -604,7 +657,7 @@ export function AboutSection() {
           <div
             ref={act3Ref}
             aria-hidden="true"
-            className="absolute inset-0 flex flex-col justify-center items-start text-left max-w-5xl mx-auto"
+            className={`flex flex-col justify-center items-start text-left max-w-5xl mx-auto ${isMobile ? "w-full" : "absolute inset-0"}`}
           >
             <div
               ref={act3TagRef}
@@ -653,7 +706,7 @@ export function AboutSection() {
           <div
             ref={act4Ref}
             aria-hidden="true"
-            className="absolute inset-0 flex flex-col justify-center items-center w-full"
+            className={`flex flex-col justify-center items-center w-full ${isMobile ? "" : "absolute inset-0"}`}
           >
             <div className="w-full max-w-5xl">
               {/* Header */}

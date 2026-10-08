@@ -205,7 +205,7 @@ export function ComputationalField({
       className={`fixed inset-0 pointer-events-none z-0 ${className}`}
       style={{
         width: "100vw",
-        height: isMobile ? "100dvh" : "100vh",
+        height: "100dvh",
         backgroundColor: "#000000",
       }}
     />
