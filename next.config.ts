@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Ensure team photos are served with long-term caching on Vercel
+  async headers() {
+    return [
+      {
+        source: "/team/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

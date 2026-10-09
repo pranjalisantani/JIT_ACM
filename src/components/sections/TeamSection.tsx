@@ -67,6 +67,15 @@ function MemberCard({
   const githubUrl = findLink(member.links, "github");
   const linkedinUrl = findLink(member.links, "linkedin");
 
+  // Increase clickable area for social links (44x44px minimum touch target)
+  const linkHitAreaStyle = {
+    width: '44px',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties;
+
   return (
     <div
       className="flex flex-col min-w-[130px] max-w-[170px] w-full sm:min-w-[150px] md:min-w-[170px] shrink-0 select-none group"
@@ -110,9 +119,10 @@ function MemberCard({
               tabIndex={isClone ? -1 : 0}
               onClick={onLinkClick}
               aria-label={`${member.name} on LinkedIn`}
-              className="hover:text-white transition-colors py-0.5 focus-visible:outline-sky-400"
+              className="hover:text-white transition-colors focus-visible:outline-sky-400"
+              style={linkHitAreaStyle}
             >
-              <LinkedInIcon className="w-3.5 h-3.5" />
+              <LinkedInIcon className="w-5 h-5" />
             </a>
           )}
           {githubUrl && (
@@ -123,9 +133,10 @@ function MemberCard({
               tabIndex={isClone ? -1 : 0}
               onClick={onLinkClick}
               aria-label={`${member.name} on GitHub`}
-              className="hover:text-white transition-colors py-0.5 focus-visible:outline-sky-400"
+              className="hover:text-white transition-colors focus-visible:outline-sky-400"
+              style={linkHitAreaStyle}
             >
-              <GitHubIcon className="w-3.5 h-3.5" />
+              <GitHubIcon className="w-5 h-5" />
             </a>
           )}
         </div>
@@ -338,6 +349,16 @@ function TeamLane({
       e.stopPropagation();
     }
   };
+
+  // Increase clickable area for social links on touch devices
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const linkHitAreaStyle = {
+    width: '44px',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties;
 
   return (
     <div
