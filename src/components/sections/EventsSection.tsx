@@ -123,6 +123,7 @@ export function EventsSection() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioning = useRef<boolean>(false);
   const userInteractingRef = useRef<boolean>(false);
+  const isHoveringRef = useRef<boolean>(false);
 
   // User-driven or automated selection of a date
   const selectDate = useCallback(
@@ -183,8 +184,8 @@ export function EventsSection() {
   const startTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (reducedMotion) return;
-    // On mobile, don't auto-cycle if user is interacting
-    if (isMobile && userInteractingRef.current) return;
+    // Pause auto-cycle on mobile interaction or desktop hover
+    if ((isMobile && userInteractingRef.current) || (!isMobile && isHoveringRef.current)) return;
 
     timerRef.current = setTimeout(() => {
       selectDate((activeIndex + 1) % totalEvents);
@@ -220,6 +221,28 @@ export function EventsSection() {
       section.removeEventListener("pointerdown", handleInteraction);
       section.removeEventListener("keydown", handleInteraction);
       section.removeEventListener("wheel", handleInteraction);
+    };
+  }, [isMobile]);
+
+  // Track hover on desktop to pause auto-cycle
+  useEffect(() => {
+    if (isMobile) return;
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const handleMouseEnter = () => {
+      isHoveringRef.current = true;
+    };
+    const handleMouseLeave = () => {
+      isHoveringRef.current = false;
+    };
+
+    section.addEventListener("mouseenter", handleMouseEnter);
+    section.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      section.removeEventListener("mouseenter", handleMouseEnter);
+      section.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, [isMobile]);
 
@@ -270,6 +293,8 @@ export function EventsSection() {
     <section
       id="events"
       ref={sectionRef}
+      onMouseEnter={() => { isHoveringRef.current = true; }}
+      onMouseLeave={() => { isHoveringRef.current = false; }}
       aria-label="04 / Events: Academic Sessions and Systems Colloquia Calendar"
       className="relative w-full text-white bg-transparent py-16 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16 select-none"
     >

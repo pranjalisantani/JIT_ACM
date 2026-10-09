@@ -127,6 +127,7 @@ export interface AlumniItem {
   tenure: string;
   currentRole?: string;
   contributions: string;
+  photo?: string;
   links?: MemberLink[];
 }
 

@@ -155,6 +155,7 @@ function TeamLane({
   // Position & physics state
   const posX = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
+  const isHovering = useRef<boolean>(false);
   const startX = useRef<number>(0);
   const startY = useRef<number>(0);
   const startOffset = useRef<number>(0);
@@ -193,7 +194,8 @@ function TeamLane({
     const tick = () => {
       const W = cycleWidth.current;
 
-      if (!isDragging.current) {
+      // Pause drift when dragging, hovering, or reduced motion
+      if (!isDragging.current && !isHovering.current) {
         if (Math.abs(momentumVel.current) > 0.05) {
           posX.current += momentumVel.current;
           momentumVel.current *= 0.94; // exponential friction decay
@@ -252,7 +254,9 @@ function TeamLane({
 
     // Direction locking: If vertical delta dominates, yield to normal page scroll
     if (!isHorizontalDrag.current && !isVerticalScroll.current) {
-      if (Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx)) {
+      // More sensitive vertical detection for mobile
+      const verticalThreshold = typeof window !== "undefined" && window.innerWidth < 768 ? 5 : 7;
+      if (Math.abs(dy) > verticalThreshold && Math.abs(dy) > Math.abs(dx)) {
         isVerticalScroll.current = true;
         isDragging.current = false;
         return;
@@ -306,6 +310,27 @@ function TeamLane({
     }, 80);
   };
 
+  // Hover handlers to pause auto-drift
+  const handleMouseEnter = () => {
+    isHovering.current = true;
+  };
+
+  const handleMouseLeave = () => {
+    isHovering.current = false;
+  };
+
+  // Touch handlers for mobile hover-like behavior
+  const handleTouchStart = () => {
+    isHovering.current = true;
+  };
+
+  const handleTouchEnd = () => {
+    // Brief delay to allow tap/click to register before resuming
+    setTimeout(() => {
+      isHovering.current = false;
+    }, 150);
+  };
+
   const handleLinkClick = (e: React.MouseEvent) => {
     if (hasMoved.current) {
       e.preventDefault();
@@ -322,6 +347,10 @@ function TeamLane({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className="relative w-full overflow-hidden touch-pan-y cursor-grab active:cursor-grabbing select-none"
     >
       {/* Lateral gradient edge fade masks */}

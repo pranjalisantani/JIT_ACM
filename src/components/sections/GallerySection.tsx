@@ -87,6 +87,9 @@ export function GallerySection() {
   const isMobile = useSyncExternalStore(subscribeViewport, getIsMobileSnapshot, getServerSnapshot);
   const isTablet = useSyncExternalStore(subscribeViewport, getIsTabletSnapshot, getServerSnapshot);
 
+  // Hover state to pause auto-drift on desktop hover
+  const isHoveringRef = useRef(false);
+
   // Responsive drift speed: paused by default on mobile, slower on tablet
   const getDriftSpeed = useCallback(() => {
     if (isMobile) return 0; // Paused by default on mobile
@@ -268,7 +271,7 @@ export function GallerySection() {
     const DRIFT_SPEED = getDriftSpeed();
 
     const tick = (_time: number, deltaTime: number) => {
-      if (isPaused || isPointerDownRef.current || isDraggingRef.current) return;
+      if (isPaused || isPointerDownRef.current || isDraggingRef.current || isHoveringRef.current) return;
       const isSitePaused = document.documentElement.getAttribute("data-motion") === "paused";
       if (isSitePaused) return;
 
@@ -478,6 +481,8 @@ export function GallerySection() {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
+          onMouseEnter={() => { isHoveringRef.current = true; }}
+          onMouseLeave={() => { isHoveringRef.current = false; }}
         >
           <div
             ref={trackRef}
