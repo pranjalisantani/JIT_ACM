@@ -18,11 +18,7 @@ const nextConfig: NextConfig = {
         destination: "/#gallery",
         permanent: false,
       },
-      {
-        source: "/team",
-        destination: "/#team",
-        permanent: false,
-      },
+      // Remove /team redirect to avoid intercepting static assets under /team/*
       {
         source: "/projects",
         destination: "/#projects",

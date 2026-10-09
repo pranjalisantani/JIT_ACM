@@ -170,6 +170,7 @@ function TeamLane({
   const startX = useRef<number>(0);
   const startY = useRef<number>(0);
   const startOffset = useRef<number>(0);
+  const startTime = useRef<number>(0);
   const hasMoved = useRef<boolean>(false);
   const isHorizontalDrag = useRef<boolean>(false);
   const isVerticalScroll = useRef<boolean>(false);
@@ -242,6 +243,7 @@ function TeamLane({
     startX.current = e.clientX;
     startY.current = e.clientY;
     startOffset.current = posX.current;
+    startTime.current = performance.now();
     lastX.current = e.clientX;
     lastTime.current = performance.now();
     momentumVel.current = 0;
@@ -263,6 +265,7 @@ function TeamLane({
 
     const dx = e.clientX - startX.current;
     const dy = e.clientY - startY.current;
+    const elapsedTime = performance.now() - startTime.current;
 
     // Direction locking: If vertical delta dominates, yield to normal page scroll
     if (!isHorizontalDrag.current && !isVerticalScroll.current) {
@@ -273,7 +276,7 @@ function TeamLane({
         isDragging.current = false;
         return;
       }
-      if (Math.abs(dx) > 5) {
+      if (Math.abs(dx) > 10 && elapsedTime > 100) {
         isHorizontalDrag.current = true;
       }
     }
