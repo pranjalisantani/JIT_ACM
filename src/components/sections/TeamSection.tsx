@@ -167,8 +167,9 @@ function TeamLane({
   const momentumVel = useRef<number>(0);
   const cycleWidth = useRef<number>(0);
 
-  // Base speed: +0.45 px/frame for rightward, -0.45 px/frame for leftward
-  const baseSpeed = direction === "right" ? 0.45 : -0.45;
+  // Base speed: +0.25 px/frame for rightward, -0.25 px/frame for leftward
+  // Slower speed gives users more time to read member info before cards move away
+  const baseSpeed = direction === "right" ? 0.25 : -0.25;
 
   // Ensure minimum cycle width by repeating members if count is small
   const repeatCount = Math.max(2, Math.ceil(8 / Math.max(1, members.length)));

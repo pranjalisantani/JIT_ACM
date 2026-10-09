@@ -189,7 +189,7 @@ export function EventsSection() {
 
     timerRef.current = setTimeout(() => {
       selectDate((activeIndex + 1) % totalEvents);
-    }, 5000);
+    }, 8000);
   }, [activeIndex, reducedMotion, selectDate, totalEvents, isMobile]);
 
   useEffect(() => {

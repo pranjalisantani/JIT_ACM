@@ -93,8 +93,8 @@ export function GallerySection() {
   // Responsive drift speed: paused by default on mobile, slower on tablet
   const getDriftSpeed = useCallback(() => {
     if (isMobile) return 0; // Paused by default on mobile
-    if (isTablet) return 12; // Half speed on tablet
-    return 24; // Full speed on desktop
+    if (isTablet) return 8; // Half speed on tablet
+    return 16; // Reduced speed on desktop for better readability
   }, [isMobile, isTablet]);
 
   // Responsive vignette width
